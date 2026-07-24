@@ -1,0 +1,6 @@
+{
+  "name": "NovaTask",
+  "description": "Telegram Mini App task earning and productivity platform with verified tasks, Birr reward withdrawals via Telebirr/CBE Birr, referrals, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
