@@ -15,29 +15,40 @@ export const NovaTaskModel = mongoose.models.NovaTaskStore ||
   mongoose.model('NovaTaskStore', NovaTaskSchema);
 
 
+mongoose.set('bufferCommands', false);
+
 let isConnected = false;
+let lastConnectAttempt = 0;
+const CONNECT_COOLDOWN_MS = 60000; // Retry at most once per minute if disconnected
 
 export async function connectToMongoDB(): Promise<boolean> {
   const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.log('[MongoDB] No MONGODB_URI found in environment.');
+  if (!uri || uri.trim() === '' || uri.includes('<password>') || uri.includes('YOUR_MONGODB')) {
     return false;
   }
 
-  try {
-    if (mongoose.connection.readyState === 1) {
-      isConnected = true;
-      return true;
-    }
+  if (mongoose.connection.readyState === 1) {
+    isConnected = true;
+    return true;
+  }
 
+  // Prevent spamming failing connection attempts on every request
+  const now = Date.now();
+  if (!isConnected && lastConnectAttempt && (now - lastConnectAttempt < CONNECT_COOLDOWN_MS)) {
+    return false;
+  }
+
+  lastConnectAttempt = now;
+
+  try {
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 3000,
     });
     isConnected = true;
     console.log('[MongoDB] Successfully connected to MongoDB Atlas!');
     return true;
   } catch (err: any) {
-    console.warn('[MongoDB] Connection failed:', err.message || err);
+    console.warn('[MongoDB] Database offline/unreachable, using local JSON storage:', err.message || err);
     isConnected = false;
     return false;
   }

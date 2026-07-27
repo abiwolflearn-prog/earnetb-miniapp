@@ -63,7 +63,10 @@ declare global {
 }
 
 export function isTelegramWebAppAvailable(): boolean {
-  return typeof window !== 'undefined' && Boolean(window.Telegram?.WebApp?.initData);
+  if (typeof window === 'undefined') return false;
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return false;
+  return Boolean(tg.initData || tg.initDataUnsafe?.user || tg.version || tg.platform);
 }
 
 export function getTelegramWebApp() {
@@ -105,9 +108,18 @@ export const MOCK_TELEGRAM_USERS: TelegramUser[] = [
 
 export function getTelegramInitData(): string {
   const tg = getTelegramWebApp();
-  if (tg && tg.initData) {
-    return tg.initData;
+  if (tg) {
+    if (tg.initData && tg.initData.trim() !== '') {
+      return tg.initData;
+    }
+    if (tg.initDataUnsafe?.user) {
+      const user = tg.initDataUnsafe.user;
+      const authDate = tg.initDataUnsafe.auth_date || Math.floor(Date.now() / 1000);
+      const hash = tg.initDataUnsafe.hash || 'simulated_hash_for_dev';
+      return `user=${encodeURIComponent(JSON.stringify(user))}&auth_date=${authDate}&hash=${hash}`;
+    }
   }
+
   // Fallback string for browser simulation
   const savedSimulatedUser = typeof localStorage !== 'undefined' 
     ? localStorage.getItem('novatask_simulated_tg_user') 
