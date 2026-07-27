@@ -1,0 +1,142 @@
+{
+  "users": [],
+  "tasks": [
+    {
+      "id": "task_daily_1",
+      "title": "Daily Check-in Reward",
+      "description": "Claim your daily attendance reward and build your streak bonus.",
+      "category": "daily",
+      "platform": "other",
+      "rewardBirr": 50,
+      "rewardPoints": 500,
+      "verificationType": "instant",
+      "status": "active",
+      "completionsCount": 1420,
+      "createdAt": "2026-07-27T06:47:23.668Z"
+    },
+    {
+      "id": "task_tg_official",
+      "title": "Join NovaTask Official Telegram Channel",
+      "description": "Subscribe to @NovaTaskOfficial on Telegram for task drops and instant cashout updates.",
+      "category": "social",
+      "platform": "telegram",
+      "rewardBirr": 150,
+      "rewardPoints": 1500,
+      "verificationType": "channel_join",
+      "targetUrl": "https://t.me/NovaTaskOfficial",
+      "channelUsername": "@NovaTaskOfficial",
+      "status": "active",
+      "completionsCount": 890,
+      "createdAt": "2026-07-27T06:47:23.669Z"
+    },
+    {
+      "id": "task_yt_sub",
+      "title": "Subscribe to NovaTask YouTube Channel",
+      "description": "Subscribe to our YouTube channel for weekly earning tutorials. Submit your channel handle or screenshot proof for verification.",
+      "category": "video",
+      "platform": "youtube",
+      "rewardBirr": 250,
+      "rewardPoints": 2500,
+      "verificationType": "admin_check",
+      "targetUrl": "https://youtube.com/@NovaTaskOfficial",
+      "status": "active",
+      "completionsCount": 512,
+      "createdAt": "2026-07-27T06:47:23.669Z"
+    },
+    {
+      "id": "task_ig_follow",
+      "title": "Follow NovaTask Instagram Page",
+      "description": "Follow @novatask_official on Instagram and submit your Instagram handle or screenshot for review.",
+      "category": "social",
+      "platform": "instagram",
+      "rewardBirr": 180,
+      "rewardPoints": 1800,
+      "verificationType": "admin_check",
+      "targetUrl": "https://instagram.com/novatask_official",
+      "status": "active",
+      "completionsCount": 410,
+      "createdAt": "2026-07-27T06:47:23.669Z"
+    },
+    {
+      "id": "task_fb_like",
+      "title": "Like NovaTask Facebook Page",
+      "description": "Like & Follow our official Facebook Page to stay informed on promo code giveaways.",
+      "category": "social",
+      "platform": "facebook",
+      "rewardBirr": 150,
+      "rewardPoints": 1500,
+      "verificationType": "admin_check",
+      "targetUrl": "https://facebook.com/NovaTaskOfficial",
+      "status": "active",
+      "completionsCount": 305,
+      "createdAt": "2026-07-27T06:47:23.669Z"
+    },
+    {
+      "id": "task_quiz_fintech",
+      "title": "Ethiopia Fintech & Digital Payment Quiz",
+      "description": "Answer 3 quick questions about Telebirr, CBE Birr, and digital banking in Ethiopia.",
+      "category": "quiz",
+      "platform": "other",
+      "rewardBirr": 200,
+      "rewardPoints": 2000,
+      "verificationType": "quiz",
+      "status": "active",
+      "completionsCount": 620,
+      "createdAt": "2026-07-27T06:47:23.669Z",
+      "quizQuestions": [
+        {
+          "id": "q1",
+          "question": "What is the maximum instant transfer limit on Telebirr SuperApp?",
+          "options": [
+            "10,000 Birr",
+            "75,000 Birr",
+            "150,000 Birr",
+            "500,000 Birr"
+          ],
+          "correctIndex": 1
+        },
+        {
+          "id": "q2",
+          "question": "Which regulator oversees mobile financial service providers in Ethiopia?",
+          "options": [
+            "Ministry of Innovation",
+            "National Bank of Ethiopia (NBE)",
+            "Ethio Telecom",
+            "Commercial Bank of Ethiopia"
+          ],
+          "correctIndex": 1
+        },
+        {
+          "id": "q3",
+          "question": "What is NovaTask minimum cashout threshold?",
+          "options": [
+            "500 Birr",
+            "1,000 Birr",
+            "2,000 Birr",
+            "5,000 Birr"
+          ],
+          "correctIndex": 2
+        }
+      ]
+    },
+    {
+      "id": "task_article_telebirr",
+      "title": "Read Telebirr Security & Fraud Guidelines",
+      "description": "Learn how to protect your digital wallet and prevent unauthorized transaction attempts.",
+      "category": "article",
+      "platform": "other",
+      "rewardBirr": 100,
+      "rewardPoints": 1000,
+      "verificationType": "timer",
+      "targetUrl": "https://www.ethiotelecom.et/telebirr/",
+      "timerSeconds": 10,
+      "status": "active",
+      "completionsCount": 712,
+      "createdAt": "2026-07-27T06:47:23.669Z"
+    }
+  ],
+  "completedTasks": [],
+  "taskSubmissions": [],
+  "withdrawals": [],
+  "transactions": []
+}
