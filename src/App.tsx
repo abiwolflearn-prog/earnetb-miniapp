@@ -22,6 +22,27 @@ import { ReferralsPage } from './pages/ReferralsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
 
+// Helper for safe JSON fetching with HTML error protection
+async function safeFetchJson(url: string, options?: RequestInit) {
+  const res = await fetch(url, options);
+  const contentType = res.headers.get('content-type') || '';
+  let data: any = {};
+
+  if (contentType.includes('application/json')) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    const cleanText = text.replace(/<[^>]*>?/gm, '').trim();
+    throw new Error(`Server response invalid (${res.status}): ${cleanText.slice(0, 100) || 'Unavailable'}`);
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed with status ${res.status}`);
+  }
+
+  return data;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType | 'admin'>('home');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -100,57 +121,60 @@ export default function App() {
         ? getTelegramInitData()
         : `user=${encodeURIComponent(JSON.stringify(customTgUser || simulatedTgUser))}&hash=simulated_hash_for_dev`;
 
-      let authRes = await fetch('/api/auth/telegram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initDataRaw })
-      });
-
-      let authData = await authRes.json();
-
-      // Fallback: If Telegram signature validation failed in dev mode, retry with simulated user payload
-      if (!authRes.ok) {
+      let authData;
+      try {
+        authData = await safeFetchJson('/api/auth/telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initDataRaw })
+        });
+      } catch (authErr: any) {
+        // Fallback: If Telegram signature validation failed in dev mode, retry with fallback user initData
         const tg = getTelegramWebApp();
         const fallbackUser = tg?.initDataUnsafe?.user || customTgUser || simulatedTgUser;
         const fallbackInitData = `user=${encodeURIComponent(JSON.stringify(fallbackUser))}&hash=simulated_hash_for_dev`;
-        
-        authRes = await fetch('/api/auth/telegram', {
+
+        authData = await safeFetchJson('/api/auth/telegram', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ initDataRaw: fallbackInitData })
         });
-        authData = await authRes.json();
-        if (authRes.ok) {
-          initDataRaw = fallbackInitData;
-        }
+        initDataRaw = fallbackInitData;
       }
-
-      if (!authRes.ok) throw new Error(authData.error || 'Authentication failed');
 
       setCurrentUser(authData.user);
       setCompletedTaskIds(authData.completedTaskIds || []);
 
       // Fetch Tasks
-      const tasksRes = await fetch('/api/tasks', {
-        headers: { 'x-telegram-init-data': initDataRaw }
-      });
-      const tasksData = await tasksRes.json();
-      if (tasksData.tasks) setTasks(tasksData.tasks);
+      try {
+        const tasksData = await safeFetchJson('/api/tasks', {
+          headers: { 'x-telegram-init-data': initDataRaw }
+        });
+        if (tasksData.tasks) setTasks(tasksData.tasks);
+      } catch (err: any) {
+        console.warn('Could not load tasks:', err);
+      }
 
       // Fetch Withdrawals & Transactions
-      const wthRes = await fetch('/api/withdrawals', {
-        headers: { 'x-telegram-init-data': initDataRaw }
-      });
-      const wthData = await wthRes.json();
-      if (wthData.withdrawals) setWithdrawals(wthData.withdrawals);
-      if (wthData.transactions) setTransactions(wthData.transactions);
+      try {
+        const wthData = await safeFetchJson('/api/withdrawals', {
+          headers: { 'x-telegram-init-data': initDataRaw }
+        });
+        if (wthData.withdrawals) setWithdrawals(wthData.withdrawals);
+        if (wthData.transactions) setTransactions(wthData.transactions);
+      } catch (err: any) {
+        console.warn('Could not load withdrawals:', err);
+      }
 
       // Fetch Referrals
-      const refRes = await fetch('/api/referrals', {
-        headers: { 'x-telegram-init-data': initDataRaw }
-      });
-      const refData = await refRes.json();
-      if (refData.referralCode) setReferralsData(refData);
+      try {
+        const refData = await safeFetchJson('/api/referrals', {
+          headers: { 'x-telegram-init-data': initDataRaw }
+        });
+        if (refData.referralCode) setReferralsData(refData);
+      } catch (err: any) {
+        console.warn('Could not load referrals:', err);
+      }
     } catch (err: any) {
       console.error('User sync error:', err);
       setAuthError(err.message || 'Connection to Telegram WebApp failed');
@@ -175,7 +199,7 @@ export default function App() {
       ? getTelegramInitData()
       : `user=${encodeURIComponent(JSON.stringify(simulatedTgUser))}&hash=simulated_hash_for_dev`;
 
-    const res = await fetch('/api/tasks/complete', {
+    const data = await safeFetchJson('/api/tasks/complete', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,11 +207,6 @@ export default function App() {
       },
       body: JSON.stringify({ taskId, quizAnswers })
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to complete task');
-    }
 
     addToast('Task Reward Claimed!', `+${data.completedTask.rewardBirr} Birr & +${data.completedTask.rewardPoints} PTS added!`, 'success');
     syncUserData();
@@ -198,18 +217,13 @@ export default function App() {
       ? getTelegramInitData()
       : `user=${encodeURIComponent(JSON.stringify(simulatedTgUser))}&hash=simulated_hash_for_dev`;
 
-    const res = await fetch('/api/user/checkin', {
+    const data = await safeFetchJson('/api/user/checkin', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-telegram-init-data': initDataRaw
       }
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Daily check-in failed');
-    }
 
     addToast('Daily Streak Claimed!', `+${data.rewardBirr} Birr added for Day ${data.user.dailyStreak}!`, 'success');
     syncUserData();
@@ -225,7 +239,7 @@ export default function App() {
       ? getTelegramInitData()
       : `user=${encodeURIComponent(JSON.stringify(simulatedTgUser))}&hash=simulated_hash_for_dev`;
 
-    const res = await fetch('/api/withdrawals', {
+    const data = await safeFetchJson('/api/withdrawals', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -233,11 +247,6 @@ export default function App() {
       },
       body: JSON.stringify(wthInput)
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Withdrawal request failed');
-    }
 
     addToast('Cashout Request Logged', `${wthInput.amount} Birr via ${wthInput.method.toUpperCase()}`, 'success');
     syncUserData();

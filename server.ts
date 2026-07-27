@@ -545,6 +545,18 @@ async function startServer() {
     }
   });
 
+  // Catch-all for undefined /api/* routes to guarantee JSON response instead of HTML
+  app.all('/api/*', (req, res) => {
+    return res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });
+  });
+
+  // Global API error middleware
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[API Error Middleware]', err);
+    if (res.headersSent) return next(err);
+    return res.status(500).json({ error: err?.message || 'Internal server error' });
+  });
+
   // Vite Middleware integration for Development / Static serving for Production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
