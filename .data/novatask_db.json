@@ -1,5 +1,33 @@
 {
-  "users": [],
+  "users": [
+    {
+      "id": "usr_987654321",
+      "telegramId": 987654321,
+      "username": "abebe_novatask",
+      "firstName": "Abebe",
+      "lastName": "Bikila",
+      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "balance": 100,
+      "points": 1000,
+      "referralsCount": 0,
+      "referredBy": null,
+      "referralCode": "ref_987654321",
+      "dailyStreak": 0,
+      "isBlocked": false,
+      "role": "user",
+      "ipAddresses": [
+        "102.213.71.195, 104.23.211.206, 10.26.238.132",
+        "102.213.71.195, 104.23.211.206, 10.26.252.130",
+        "102.213.71.195, 172.68.128.173, 10.26.151.3",
+        "102.213.71.195, 172.68.128.172, 10.26.238.132",
+        "102.213.71.195, 172.71.190.254, 10.26.238.132"
+      ],
+      "lastIp": "102.213.71.195, 172.71.190.254, 10.26.238.132",
+      "riskScore": 0,
+      "fraudFlags": [],
+      "createdAt": "2026-07-27T08:57:52.430Z"
+    }
+  ],
   "tasks": [
     {
       "id": "task_daily_1",
@@ -138,5 +166,16 @@
   "completedTasks": [],
   "taskSubmissions": [],
   "withdrawals": [],
-  "transactions": []
+  "transactions": [
+    {
+      "id": "tx_welcome_1785142672430",
+      "userId": "usr_987654321",
+      "type": "task_reward",
+      "amount": 100,
+      "points": 1000,
+      "description": "Welcome Bonus for joining NovaTask",
+      "status": "completed",
+      "createdAt": "2026-07-27T08:57:52.430Z"
+    }
+  ]
 }
