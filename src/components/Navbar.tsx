@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, CheckSquare, Wallet, Users, User } from 'lucide-react';
 import { triggerHaptic } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 
 export type TabType = 'home' | 'tasks' | 'wallet' | 'referrals' | 'profile';
 
@@ -11,12 +12,14 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onChangeTab, pendingTasksCount = 0 }) => {
+  const { t } = useTranslation();
+
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: pendingTasksCount },
-    { id: 'wallet', label: 'Wallet', icon: Wallet },
-    { id: 'referrals', label: 'Invite', icon: Users },
-    { id: 'profile', label: 'Profile', icon: User }
+    { id: 'home', label: t('nav.home'), icon: Home },
+    { id: 'tasks', label: t('nav.tasks'), icon: CheckSquare, badge: pendingTasksCount },
+    { id: 'wallet', label: t('nav.wallet'), icon: Wallet },
+    { id: 'referrals', label: t('nav.invite'), icon: Users },
+    { id: 'profile', label: t('nav.profile'), icon: User }
   ];
 
   const handleTabClick = (tabId: TabType) => {
@@ -62,3 +65,4 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onChangeTab, pendingT
     </nav>
   );
 };
+

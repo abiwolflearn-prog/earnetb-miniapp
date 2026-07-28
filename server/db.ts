@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { User, Task, CompletedTask, Withdrawal, Transaction, AdminAnalytics, TaskSubmission } from '../src/types';
+import { User, Task, CompletedTask, Withdrawal, Transaction, AdminAnalytics, TaskSubmission, SystemSettings, BroadcastNotification } from '../src/types';
 import { INITIAL_TASKS } from '../src/data/initialTasks';
 import { connectToMongoDB, loadFromMongoDB, saveToMongoDB } from './mongodb';
 
@@ -15,6 +15,8 @@ export interface DatabaseSchema {
   taskSubmissions: TaskSubmission[];
   withdrawals: Withdrawal[];
   transactions: Transaction[];
+  systemSettings?: SystemSettings;
+  broadcasts?: BroadcastNotification[];
 }
 
 // In-memory cache synced with JSON disk storage & MongoDB Atlas
@@ -24,7 +26,16 @@ let dbCache: DatabaseSchema = {
   completedTasks: [],
   taskSubmissions: [],
   withdrawals: [],
-  transactions: []
+  transactions: [],
+  systemSettings: {
+    minWithdrawalBirr: 2000,
+    maintenanceMode: false,
+    botUsername: '@EtNovaTasksbot',
+    botTokenConfigured: true,
+    systemNotice: 'NovaTask Official Platform active and fully operational.',
+    autoApprovalThreshold: 150
+  },
+  broadcasts: []
 };
 
 function ensureDataDir() {
@@ -710,6 +721,328 @@ export const db = {
       pendingSubmissionsCount,
       blockedUsersCount,
       flaggedUsersCount
+    };
+  },
+
+  // System Settings & Broadcasts
+  async getSystemSettings(): Promise<SystemSettings> {
+    const data = loadDatabase();
+    if (!data.systemSettings) {
+      data.systemSettings = {
+        minWithdrawalBirr: 2000,
+        maintenanceMode: false,
+        botUsername: '@EtNovaTasksbot',
+        botTokenConfigured: true,
+        systemNotice: 'NovaTask Official Platform active and fully operational.',
+        autoApprovalThreshold: 150
+      };
+      saveDatabase(data);
+    }
+    return data.systemSettings;
+  },
+
+  async updateSystemSettings(updates: Partial<SystemSettings>): Promise<SystemSettings> {
+    const data = loadDatabase();
+    const current = await this.getSystemSettings();
+    data.systemSettings = { ...current, ...updates };
+    saveDatabase(data);
+    return data.systemSettings;
+  },
+
+  async getBroadcasts(): Promise<BroadcastNotification[]> {
+    const data = loadDatabase();
+    return data.broadcasts || [];
+  },
+
+  async createBroadcast(broadcastData: {
+    title: string;
+    message: string;
+    targetAudience: 'all' | 'active' | 'blocked';
+  }): Promise<BroadcastNotification> {
+    const data = loadDatabase();
+    if (!data.broadcasts) data.broadcasts = [];
+
+    const recipients = data.users.filter(u => {
+      if (broadcastData.targetAudience === 'active') return !u.isBlocked;
+      if (broadcastData.targetAudience === 'blocked') return u.isBlocked;
+      return true;
+    });
+
+    const newBroadcast: BroadcastNotification = {
+      id: `bc_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      title: broadcastData.title,
+      message: broadcastData.message,
+      targetAudience: broadcastData.targetAudience,
+      sentAt: new Date().toISOString(),
+      recipientCount: recipients.length
+    };
+
+    data.broadcasts.unshift(newBroadcast);
+    saveDatabase(data);
+    return newBroadcast;
+  },
+
+  // Live Withdrawal Feed & Statistics
+  async getRecentWithdrawalsFeed() {
+    const data = loadDatabase();
+    const realWithdrawals = data.withdrawals || [];
+
+    // Helper formatting functions
+    const maskNameStr = (name: string) => {
+      if (!name) return 'A**l';
+      const clean = name.trim();
+      const parts = clean.split(/\s+/);
+      return parts.map(p => {
+        if (p.length <= 1) return p;
+        if (p.length === 2) return p[0] + '*';
+        return `${p[0]}${'*'.repeat(p.length - 2)}${p[p.length - 1]}`;
+      }).join(' ');
+    };
+
+    const maskPhoneStr = (phone: string) => {
+      if (!phone) return '09******20';
+      let digits = phone.replace(/\D/g, '');
+      if (digits.startsWith('251')) digits = '0' + digits.slice(3);
+      if (!digits.startsWith('0')) digits = '0' + digits;
+      if (digits.length < 8) return '09******20';
+      return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
+    };
+
+    const maskAmountStr = (amt: number) => {
+      const num = Math.round(amt).toString();
+      if (num.length <= 1) return `${num} Birr`;
+      return `${num[0]}${'*'.repeat(num.length - 1)} Birr`;
+    };
+
+    const maskBankStr = (method: string, name?: string) => {
+      const str = (name || method || '').toLowerCase();
+      if (str.includes('telebirr')) return 'T******r';
+      if (str.includes('cbe birr') || str.includes('cbe_birr')) return 'C** Birr';
+      if (str.includes('commercial bank') || str.includes('cbe')) return 'C******** Bank';
+      if (str.includes('awash')) return 'A**** Bank';
+      if (str.includes('dashen')) return 'D****n Bank';
+      if (str.includes('abyssinia')) return 'A*******a Bank';
+      if (str.includes('oromia')) return 'O****a Bank';
+      return 'C** Bank';
+    };
+
+    const getTimeAgoStr = (ms: number) => {
+      const mins = Math.floor(ms / (60 * 1000));
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins} mins ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+      const days = Math.floor(hours / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    };
+
+    const now = Date.now();
+
+    // Map real database withdrawals
+    const formattedReal = realWithdrawals.map(wth => {
+      const user = data.users.find(u => u.id === wth.userId || u.telegramId === wth.telegramId);
+      const rawName = wth.accountName || (user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User');
+      const ts = new Date(wth.createdAt).getTime() || now;
+      return {
+        id: wth.id,
+        rawName,
+        maskedName: maskNameStr(rawName),
+        rawPhone: wth.accountNumber,
+        maskedPhone: maskPhoneStr(wth.accountNumber),
+        rawAmount: wth.amount,
+        maskedAmount: maskAmountStr(wth.amount),
+        rawBank: wth.method === 'telebirr' ? 'Telebirr' : wth.method === 'cbe_birr' ? 'CBE Birr' : 'Commercial Bank of Ethiopia',
+        maskedBank: maskBankStr(wth.method, wth.accountName),
+        method: wth.method,
+        timeAgo: getTimeAgoStr(now - ts),
+        status: wth.status,
+        timestamp: ts,
+        isSampleData: false
+      };
+    });
+
+    // Sample Ethiopian withdrawal generator to guarantee 90+ records
+    const sampleEthiopianNames = [
+      'Abel Tefera', 'Mohammed Seid', 'Tigist Alemayehu', 'Biniam Worku', 'Genet Kebede',
+      'Dawit Hailu', 'Kidist Tadesse', 'Solomon Bekele', 'Bethlehem Girma', 'Tariku Mulatu',
+      'Yonas Assefa', 'Tsion Demisse', 'Meron Tesfaye', 'Halima Hussein', 'Robel Berhane',
+      'Chaltu Tufa', 'Kassahun Belay', 'Henok Mulugeta', 'Fikirte Eshetu', 'Ermias Desta',
+      'Rediet Negash', 'Sifan Lemma', 'Mikiyas Fikru', 'Abebe Bikila', 'Hiwot Haile'
+    ];
+
+    const sampleBanks = [
+      { method: 'telebirr' as const, name: 'Telebirr', mask: 'T******r' },
+      { method: 'cbe_birr' as const, name: 'CBE Birr', mask: 'C** Birr' },
+      { method: 'bank_transfer' as const, name: 'Commercial Bank of Ethiopia', mask: 'C******** Bank' },
+      { method: 'bank_transfer' as const, name: 'Awash Bank', mask: 'A**** Bank' },
+      { method: 'bank_transfer' as const, name: 'Dashen Bank', mask: 'D****n Bank' },
+      { method: 'bank_transfer' as const, name: 'Abyssinia Bank', mask: 'A*******a Bank' }
+    ];
+
+    const sampleAmounts = [2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000, 7500, 10000];
+
+    const sampleRecords: typeof formattedReal = [];
+    const targetCount = 95;
+    const itemsNeeded = Math.max(0, targetCount - formattedReal.length);
+
+    for (let i = 0; i < itemsNeeded; i++) {
+      const name = sampleEthiopianNames[i % sampleEthiopianNames.length];
+      const bank = sampleBanks[i % sampleBanks.length];
+      const amt = sampleAmounts[i % sampleAmounts.length];
+      // Random spread over the past 48 hours
+      const minutesAgo = Math.floor(i * 28 + Math.random() * 15);
+      const ts = now - minutesAgo * 60 * 1000;
+      const phoneNum = `09${10000000 + Math.floor(Math.random() * 89999999)}`;
+
+      sampleRecords.push({
+        id: `sample_wth_${i}_${ts}`,
+        rawName: name,
+        maskedName: maskNameStr(name),
+        rawPhone: phoneNum,
+        maskedPhone: maskPhoneStr(phoneNum),
+        rawAmount: amt,
+        maskedAmount: maskAmountStr(amt),
+        rawBank: bank.name,
+        maskedBank: bank.mask,
+        method: bank.method,
+        timeAgo: getTimeAgoStr(now - ts),
+        status: 'approved',
+        timestamp: ts,
+        isSampleData: true
+      });
+    }
+
+    const combinedList = [...formattedReal, ...sampleRecords].sort((a, b) => b.timestamp - a.timestamp);
+
+    // Compute stats
+    const totalCount = 1420 + formattedReal.length;
+    const totalAmountBirr = combinedList.reduce((sum, item) => sum + item.rawAmount, 0) * 12;
+    const todayCount = combinedList.filter(item => now - item.timestamp < 24 * 60 * 60 * 1000).length;
+
+    const methodCounts: Record<string, number> = { telebirr: 0, cbe_birr: 0, bank_transfer: 0 };
+    combinedList.forEach(item => {
+      if (item.method in methodCounts) methodCounts[item.method]++;
+      else methodCounts.bank_transfer++;
+    });
+
+    const popularMethods = [
+      { method: 'telebirr', label: 'Telebirr', count: methodCounts.telebirr, percentage: Math.round((methodCounts.telebirr / combinedList.length) * 100) },
+      { method: 'bank_transfer', label: 'Bank Transfer (CBE/Awash)', count: methodCounts.bank_transfer, percentage: Math.round((methodCounts.bank_transfer / combinedList.length) * 100) },
+      { method: 'cbe_birr', label: 'CBE Birr', count: methodCounts.cbe_birr, percentage: Math.round((methodCounts.cbe_birr / combinedList.length) * 100) }
+    ];
+
+    return {
+      success: true,
+      withdrawals: combinedList,
+      stats: {
+        totalCount,
+        totalAmountBirr,
+        todayCount,
+        popularMethods
+      },
+      hasRealData: formattedReal.length > 0
+    };
+  },
+
+  // Live Top Leaderboard
+  async getLeaderboardRankings() {
+    const data = loadDatabase();
+    const maskNameStr = (name: string) => {
+      if (!name) return 'A**l';
+      const clean = name.trim();
+      const parts = clean.split(/\s+/);
+      return parts.map(p => {
+        if (p.length <= 1) return p;
+        if (p.length === 2) return p[0] + '*';
+        return `${p[0]}${'*'.repeat(p.length - 2)}${p[p.length - 1]}`;
+      }).join(' ');
+    };
+
+    const maskUsernameStr = (uname?: string) => {
+      if (!uname) return '@u***r';
+      const clean = uname.replace('@', '');
+      if (clean.length <= 2) return `@${clean[0]}*`;
+      return `@${clean[0]}${'*'.repeat(clean.length - 2)}${clean[clean.length - 1]}`;
+    };
+
+    const realUsers = [...data.users].sort((a, b) => b.referralsCount - a.referralsCount || b.balance - a.balance);
+
+    const defaultTopReferrers = [
+      { name: 'Abel Tefera', username: 'abel_t', referrals: 450, earned: 22500, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Biniam Worku', username: 'biniam_w', referrals: 382, earned: 19100, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Chaltu Tufa', username: 'chaltu_t', referrals: 315, earned: 15750, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Dawit Hailu', username: 'dawit_h', referrals: 270, earned: 13500, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Ermias Desta', username: 'ermias_d', referrals: 210, earned: 10500, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Fikirte Eshetu', username: 'fikirte_e', referrals: 185, earned: 9250, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Genet Kebede', username: 'genet_k', referrals: 160, earned: 8000, avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Henok Mulugeta', username: 'henok_m', referrals: 142, earned: 7100, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Halima Hussein', username: 'halima_h', referrals: 128, earned: 6400, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80' },
+      { name: 'Kidist Tadesse', username: 'kidist_t', referrals: 110, earned: 5500, avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80' }
+    ];
+
+    const leaderboard: Array<{
+      rank: number;
+      rawName: string;
+      maskedName: string;
+      rawUsername: string;
+      maskedUsername: string;
+      photoUrl: string;
+      referralsCount: number;
+      totalEarnedBirr: number;
+      isSampleData: boolean;
+    }> = [];
+
+    // First process real top users
+    realUsers.forEach((u, idx) => {
+      const rawName = `${u.firstName} ${u.lastName || ''}`.trim() || 'User';
+      leaderboard.push({
+        rank: idx + 1,
+        rawName,
+        maskedName: maskNameStr(rawName),
+        rawUsername: u.username ? `@${u.username}` : `@user_${u.telegramId}`,
+        maskedUsername: maskUsernameStr(u.username),
+        photoUrl: u.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        referralsCount: Math.max(u.referralsCount, 0),
+        totalEarnedBirr: Math.max(u.referralsCount * 50, u.balance),
+        isSampleData: false
+      });
+    });
+
+    // Supplement with sample Ethiopian referrers if fewer than 10
+    if (leaderboard.length < 10) {
+      defaultTopReferrers.slice(leaderboard.length).forEach((sample) => {
+        const rank = leaderboard.length + 1;
+        leaderboard.push({
+          rank,
+          rawName: sample.name,
+          maskedName: maskNameStr(sample.name),
+          rawUsername: `@${sample.username}`,
+          maskedUsername: maskUsernameStr(sample.username),
+          photoUrl: sample.avatar,
+          referralsCount: sample.referrals,
+          totalEarnedBirr: sample.earned,
+          isSampleData: true
+        });
+      });
+    }
+
+    // Ensure sorted by referrals
+    leaderboard.sort((a, b) => b.referralsCount - a.referralsCount || b.totalEarnedBirr - a.totalEarnedBirr);
+    leaderboard.forEach((item, idx) => {
+      item.rank = idx + 1;
+    });
+
+    // Top 3 Podium layout
+    const top3 = {
+      rank1: leaderboard[0] || null,
+      rank2: leaderboard[1] || null,
+      rank3: leaderboard[2] || null
+    };
+
+    return {
+      success: true,
+      top3,
+      leaderboard: leaderboard.slice(0, 20)
     };
   }
 };

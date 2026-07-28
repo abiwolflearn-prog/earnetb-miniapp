@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Task } from '../types';
-import { Wallet, CheckCircle2, Flame, Users, ArrowUpRight, Zap, Gift, Trophy, Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
+import { Wallet, CheckCircle2, Flame, Users, Zap, Gift, Trophy, Sparkles, ChevronRight, Activity } from 'lucide-react';
+import { LeaderboardPodium, LeaderboardUser } from '../components/LeaderboardPodium';
+import { LiveWithdrawalFeed } from '../components/LiveWithdrawalFeed';
 
 interface HomePageProps {
   user: User;
@@ -21,6 +24,31 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenTaskModal,
   onOpenWithdrawModal
 }) => {
+  const { t, formatCurrency } = useTranslation();
+
+  const [activeSubTab, setActiveSubTab] = useState<'feed' | 'leaderboard' | 'tasks'>('feed');
+  const [leaderboardData, setLeaderboardData] = useState<{
+    top3: { rank1: LeaderboardUser | null; rank2: LeaderboardUser | null; rank3: LeaderboardUser | null };
+    leaderboard: LeaderboardUser[];
+  }>({
+    top3: { rank1: null, rank2: null, rank3: null },
+    leaderboard: []
+  });
+
+  useEffect(() => {
+    fetch('/api/leaderboard')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.top3) {
+          setLeaderboardData({
+            top3: data.top3,
+            leaderboard: data.leaderboard || []
+          });
+        }
+      })
+      .catch((err) => console.error('Leaderboard fetch error:', err));
+  }, []);
+
   const activeTasks = tasks.filter((t) => t.status === 'active');
   const availableTasks = activeTasks.filter((t) => !completedTaskIds.includes(t.id));
 
@@ -41,30 +69,31 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 fill-indigo-400/20" /> Active Balance
+                <Zap className="w-3.5 h-3.5 fill-indigo-400/20" /> {t('home.active_balance')}
               </span>
             </div>
-            <span className="text-xs text-slate-400 font-mono">TG ID: {user.telegramId}</span>
+            <span className="text-xs text-slate-400 font-mono">{t('home.tg_id')}: {user.telegramId}</span>
           </div>
 
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Balance</p>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{t('home.total_balance')}</p>
             <div className="flex items-baseline gap-2 mt-1">
               <h2 className="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-purple-500">
-                {user.balance.toLocaleString()}{' '}
-                <span className="text-xl font-bold text-amber-400">Birr</span>
+                {formatCurrency(user.balance)}
               </h2>
             </div>
             <p className="text-xs text-indigo-400 font-medium mt-1 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> {user.points.toLocaleString()} Points Wallet
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> {t('home.points_wallet', { points: user.points.toLocaleString() })}
             </p>
           </div>
 
           {/* Withdrawal Progress Bar */}
           <div className="space-y-1.5 pt-2 border-t border-white/10">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Min. Cashout Progress</span>
-              <span className="font-bold text-white">{withdrawalProgressPercent}% ({user.balance} / 2,000 Birr)</span>
+              <span className="text-slate-400">{t('home.cashout_progress')}</span>
+              <span className="font-bold text-white">
+                {t('home.cashout_detail', { percent: withdrawalProgressPercent, balance: user.balance.toLocaleString() })}
+              </span>
             </div>
             <div className="w-full h-2 bg-[#050508] rounded-full overflow-hidden border border-white/10">
               <div
@@ -81,14 +110,14 @@ export const HomePage: React.FC<HomePageProps> = ({
               className="py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition-all active:scale-[0.98]"
             >
               <Zap className="w-4 h-4 fill-white" />
-              <span>Earn Rewards</span>
+              <span>{t('home.earn_rewards')}</span>
             </button>
             <button
               onClick={onOpenWithdrawModal}
               className="py-3.5 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10 font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
             >
               <Wallet className="w-4 h-4 text-amber-400" />
-              <span>Cash Out</span>
+              <span>{t('home.cash_out')}</span>
             </button>
           </div>
         </div>
@@ -99,7 +128,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="p-4 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 relative overflow-hidden">
           <div className="absolute -right-2 -top-2 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-xs font-medium">Tasks Done</span>
+            <span className="text-slate-400 text-xs font-medium">{t('home.tasks_done')}</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-white">{completedTaskIds.length}</p>
@@ -108,16 +137,16 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="p-4 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 relative overflow-hidden">
           <div className="absolute -right-2 -top-2 w-16 h-16 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-xs font-medium">Daily Streak</span>
+            <span className="text-slate-400 text-xs font-medium">{t('home.daily_streak')}</span>
             <Flame className="w-4 h-4 text-amber-400 fill-amber-400/20" />
           </div>
-          <p className="text-2xl font-bold text-white">{user.dailyStreak} Days</p>
+          <p className="text-2xl font-bold text-white">{user.dailyStreak} {t('home.days')}</p>
         </div>
 
         <div className="p-4 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 relative overflow-hidden">
           <div className="absolute -right-2 -top-2 w-16 h-16 bg-purple-500/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-xs font-medium">Friends Invited</span>
+            <span className="text-slate-400 text-xs font-medium">{t('home.friends_invited')}</span>
             <Users className="w-4 h-4 text-purple-400" />
           </div>
           <p className="text-2xl font-bold text-white">{user.referralsCount}</p>
@@ -126,10 +155,10 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="p-4 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 relative overflow-hidden">
           <div className="absolute -right-2 -top-2 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-xs font-medium">Referral Bonus</span>
+            <span className="text-slate-400 text-xs font-medium">{t('home.referral_bonus')}</span>
             <Trophy className="w-4 h-4 text-indigo-400" />
           </div>
-          <p className="text-2xl font-bold text-amber-400">{user.referralsCount * 50} Birr</p>
+          <p className="text-2xl font-bold text-amber-400">{formatCurrency(user.referralsCount * 50)}</p>
         </div>
       </div>
 
@@ -141,9 +170,9 @@ export const HomePage: React.FC<HomePageProps> = ({
             <Gift className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">Daily Attendance Bonus</h4>
+            <h4 className="text-sm font-bold text-white">{t('home.attendance_bonus')}</h4>
             <p className="text-xs text-slate-400">
-              {isCheckedInToday ? 'Checked in for today!' : 'Claim your daily attendance reward'}
+              {isCheckedInToday ? t('home.checked_in_today') : t('home.claim_attendance_reward')}
             </p>
           </div>
         </div>
@@ -156,90 +185,126 @@ export const HomePage: React.FC<HomePageProps> = ({
               : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white shadow-md shadow-indigo-500/20'
           }`}
         >
-          {isCheckedInToday ? 'Claimed' : 'Check In'}
+          {isCheckedInToday ? t('home.claimed') : t('home.check_in')}
         </button>
       </div>
 
-      {/* Top Available Tasks */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold text-white">Top Available Tasks</h3>
-            <p className="text-xs text-slate-400">Complete verified tasks to earn Birr instantly</p>
-          </div>
-          <button
-            onClick={() => onNavigateTab('tasks')}
-            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-          >
-            <span>View All ({availableTasks.length})</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+      {/* FEATURE SECTION SWITCHER: Recent Withdrawals Feed | Leaderboard | Available Tasks */}
+      <div className="flex items-center gap-1 p-1 bg-[#0a0a0f] border border-white/10 rounded-2xl">
+        <button
+          onClick={() => setActiveSubTab('feed')}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+            activeSubTab === 'feed'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>Live Withdrawals</span>
+        </button>
 
-        <div className="space-y-2.5">
-          {availableTasks.slice(0, 4).map((task) => (
-            <div
-              key={task.id}
-              onClick={() => onOpenTaskModal(task)}
-              className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between gap-3 hover:bg-white/[0.08] transition-all cursor-pointer group"
+        <button
+          onClick={() => setActiveSubTab('leaderboard')}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+            activeSubTab === 'leaderboard'
+              ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-lg shadow-amber-500/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Trophy className="w-3.5 h-3.5" />
+          <span>Leaderboard</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('tasks')}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+            activeSubTab === 'tasks'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          <span>Tasks ({availableTasks.length})</span>
+        </button>
+      </div>
+
+      {/* CONTENT FOR SUB-TAB */}
+      {activeSubTab === 'feed' && (
+        <div className="p-4 rounded-3xl bg-[#0d0d14] border border-white/10 shadow-2xl">
+          <LiveWithdrawalFeed />
+        </div>
+      )}
+
+      {activeSubTab === 'leaderboard' && (
+        <div className="p-4 rounded-3xl bg-[#0d0d14] border border-white/10 shadow-2xl">
+          <LeaderboardPodium
+            top3={leaderboardData.top3}
+            leaderboard={leaderboardData.leaderboard}
+          />
+        </div>
+      )}
+
+      {activeSubTab === 'tasks' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-white">{t('home.top_available_tasks')}</h3>
+              <p className="text-xs text-slate-400">{t('home.complete_verified_tasks')}</p>
+            </div>
+            <button
+              onClick={() => onNavigateTab('tasks')}
+              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                      {task.category}
-                    </span>
+              <span>{t('home.view_all', { count: availableTasks.length })}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {availableTasks.slice(0, 5).map((task) => (
+              <div
+                key={task.id}
+                onClick={() => onOpenTaskModal(task)}
+                className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between gap-3 hover:bg-white/[0.08] transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                    <Zap className="w-5 h-5" />
                   </div>
-                  <h4 className="text-sm font-bold text-white truncate mt-0.5">{task.title}</h4>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                        {task.category}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-white truncate mt-0.5">{task.title}</h4>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-right">
+                    <span className="text-sm font-extrabold text-indigo-400 block">+{formatCurrency(task.rewardBirr)}</span>
+                    <span className="text-[10px] text-slate-500">+{task.rewardPoints} {t('home.pts')}</span>
+                  </div>
+                  <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors">
+                    {t('home.start')}
+                  </button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="text-right">
-                  <span className="text-sm font-extrabold text-indigo-400 block">+{task.rewardBirr} Birr</span>
-                  <span className="text-[10px] text-slate-500">+{task.rewardPoints} PTS</span>
-                </div>
-                <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors">
-                  Start
-                </button>
+            {availableTasks.length === 0 && (
+              <div className="p-8 rounded-3xl bg-[#0f0f15] border border-white/5 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                <p className="text-sm font-semibold text-white">{t('home.all_tasks_completed')}</p>
+                <p className="text-xs text-slate-400">{t('home.all_tasks_completed_desc')}</p>
               </div>
-            </div>
-          ))}
-
-          {availableTasks.length === 0 && (
-            <div className="p-8 rounded-3xl bg-[#0f0f15] border border-white/5 text-center space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-              <p className="text-sm font-semibold text-white">All Available Tasks Completed!</p>
-              <p className="text-xs text-slate-400">Check back later or invite friends to earn referral bonuses.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Community Live Activity Feed */}
-      <div className="p-5 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-3">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>Live Platform Activity</span>
-        </h4>
-        <div className="space-y-2 text-xs">
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between text-slate-200">
-            <span>Abebe B. withdrew <strong className="text-emerald-400">2,500 Birr</strong> via Telebirr</span>
-            <span className="text-[10px] text-slate-500">2 mins ago</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between text-slate-200">
-            <span>Selam T. earned <strong className="text-indigo-400">+250 Birr</strong> on Ethiopia Fintech Quiz</span>
-            <span className="text-[10px] text-slate-500">5 mins ago</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between text-slate-200">
-            <span>Dawit G. invited <strong className="text-purple-400">3 new friends</strong> (+150 Birr)</span>
-            <span className="text-[10px] text-slate-500">12 mins ago</span>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
+
+

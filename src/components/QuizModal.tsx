@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Task } from '../types';
 import { triggerHaptic } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 import confetti from 'canvas-confetti';
 import { HelpCircle, CheckCircle2, AlertCircle, X, Sparkles, Award } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface QuizModalProps {
 }
 
 export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete }) => {
+  const { t, formatCurrency } = useTranslation();
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -32,7 +34,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
 
   const handleNext = async () => {
     if (selectedAnswers[currentQuestionIdx] === undefined) {
-      setErrorMsg('Please select an option before proceeding.');
+      setErrorMsg(t('tasks.select_option_error'));
       return;
     }
 
@@ -53,7 +55,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
         });
       } catch (err: any) {
         triggerHaptic('error');
-        setErrorMsg(err.message || 'Quiz verification failed. Check your answers and try again!');
+        setErrorMsg(err.message || t('tasks.quiz_failed'));
       } finally {
         setIsSubmitting(false);
       }
@@ -76,8 +78,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
                 <HelpCircle className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-white">Interactive Quiz Task</h3>
-                <p className="text-xs text-slate-400">Answer correctly to win +{task.rewardBirr} Birr</p>
+                <h3 className="text-base font-bold text-white">{t('tasks.quiz_task_title')}</h3>
+                <p className="text-xs text-slate-400">{t('tasks.quiz_subtitle', { reward: formatCurrency(task.rewardBirr) })}</p>
               </div>
             </div>
             <button
@@ -93,23 +95,23 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
                 <Award className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-bold text-white">Quiz Mastered!</h4>
+              <h4 className="text-xl font-bold text-white">{t('tasks.quiz_mastered_title')}</h4>
               <p className="text-sm text-slate-300">
-                You scored 100% and earned <strong className="text-amber-400">+{task.rewardBirr} Birr</strong> & <strong className="text-cyan-400">+{task.rewardPoints} PTS</strong>!
+                {t('tasks.quiz_mastered_desc', { birr: formatCurrency(task.rewardBirr), points: task.rewardPoints })}
               </p>
               <button
                 onClick={onClose}
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 font-bold text-white shadow-lg shadow-cyan-500/20"
               >
-                Back to Tasks
+                {t('tasks.back_to_tasks')}
               </button>
             </div>
           ) : (
             <div className="space-y-4">
               {/* Progress indicator */}
               <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Question {currentQuestionIdx + 1} of {task.quizQuestions.length}</span>
-                <span className="font-semibold text-purple-400">Reward: +{task.rewardBirr} Birr</span>
+                <span>{t('tasks.question_progress', { current: currentQuestionIdx + 1, total: task.quizQuestions.length })}</span>
+                <span className="font-semibold text-purple-400">{t('tasks.reward_label', { reward: formatCurrency(task.rewardBirr) })}</span>
               </div>
               <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                 <div
@@ -157,10 +159,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
                 className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 font-bold text-white text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <span>Checking answers...</span>
+                  <span>{t('tasks.checking_answers')}</span>
                 ) : (
                   <>
-                    <span>{currentQuestionIdx < task.quizQuestions.length - 1 ? 'Next Question' : 'Submit Quiz & Claim Reward'}</span>
+                    <span>{currentQuestionIdx < task.quizQuestions.length - 1 ? t('tasks.next_question') : t('tasks.submit_quiz')}</span>
                     <Sparkles className="w-4 h-4" />
                   </>
                 )}
@@ -172,3 +174,4 @@ export const QuizModal: React.FC<QuizModalProps> = ({ task, onClose, onComplete 
     </AnimatePresence>
   );
 };
+

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BotCommandResponse, TelegramUser } from '../types';
 import { triggerHaptic } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 import { Bot, Send, X, ExternalLink, RefreshCw, Zap } from 'lucide-react';
 
 interface BotSandboxModalProps {
@@ -25,18 +26,19 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
   currentUser,
   onLaunchMiniAppFromBot
 }) => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg_welcome',
       sender: 'bot',
-      text: `👋 Hello! I am the *NovaTask Official Telegram Bot*.\n\nType or tap any command below to test bot responses:\n\n• /start - Welcome & Mini App Launcher\n• /help - How to earn & withdraw Telebirr\n• /profile - Your balance & referral link\n• /tasks - Top available tasks\n• /withdraw - Cashout threshold check`,
+      text: t('bot.welcome_text'),
       inlineKeyboard: [
         [
-          { text: '🚀 Launch NovaTask Mini App', url: '#' }
+          { text: t('bot.launch_app'), url: '#' }
         ],
         [
-          { text: '📋 View Tasks', callback_data: 'tasks' },
-          { text: '💳 Wallet & Cashout', callback_data: 'withdraw' }
+          { text: t('bot.view_tasks'), callback_data: 'tasks' },
+          { text: t('bot.wallet_cashout'), callback_data: 'withdraw' }
         ]
       ],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -87,7 +89,7 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
       const errorMsg: ChatMessage = {
         id: `bot_err_${Date.now()}`,
         sender: 'bot',
-        text: `⚠️ Bot server communication error. Please try again.`,
+        text: t('bot.comm_error'),
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -118,7 +120,7 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
                   <span>@EtNovaTasksbot</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </h3>
-                <p className="text-[11px] text-cyan-400 font-medium">Telegram Bot Command Simulator</p>
+                <p className="text-[11px] text-cyan-400 font-medium">{t('bot.simulator_subtitle')}</p>
               </div>
             </div>
             <button
@@ -202,7 +204,7 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
             {isLoading && (
               <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-800/50 text-slate-400 text-xs w-fit">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                <span>Bot typing...</span>
+                <span>{t('bot.typing')}</span>
               </div>
             )}
           </div>
@@ -214,7 +216,7 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
               value={inputCommand}
               onChange={(e) => setInputCommand(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendCommand()}
-              placeholder="Type /start, /help, /profile..."
+              placeholder={t('bot.input_placeholder')}
               className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
             />
             <button
@@ -230,3 +232,4 @@ export const BotSandboxModal: React.FC<BotSandboxModalProps> = ({
     </AnimatePresence>
   );
 };
+

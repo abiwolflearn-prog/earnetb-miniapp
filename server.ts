@@ -366,6 +366,26 @@ async function startServer() {
     }
   });
 
+  // 11. GET /api/withdrawals/recent - Live Recent Withdrawals Stream (80+ records)
+  app.get('/api/withdrawals/recent', async (req, res) => {
+    try {
+      const feedData = await db.getRecentWithdrawalsFeed();
+      return res.json(feedData);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to fetch recent withdrawals feed' });
+    }
+  });
+
+  // 12. GET /api/leaderboard - Top Referrers Leaderboard with Podium Layout
+  app.get('/api/leaderboard', async (req, res) => {
+    try {
+      const leaderboardData = await db.getLeaderboardRankings();
+      return res.json(leaderboardData);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to fetch leaderboard' });
+    }
+  });
+
   // =====================================
   // BOT COMMAND & WEBHOOK ROUTES
   // =====================================
@@ -540,6 +560,49 @@ async function startServer() {
       const { balance } = req.body;
       const user = await db.updateUserBalance(userId, Number(balance));
       return res.json({ user });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  // System Settings Management
+  app.get('/api/admin/settings', requireAdminAuth, async (req, res) => {
+    try {
+      const settings = await db.getSystemSettings();
+      return res.json({ settings });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/api/admin/settings', requireAdminAuth, async (req, res) => {
+    try {
+      const updates = req.body;
+      const settings = await db.updateSystemSettings(updates);
+      return res.json({ settings });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Broadcast Notifications
+  app.get('/api/admin/broadcasts', requireAdminAuth, async (req, res) => {
+    try {
+      const broadcasts = await db.getBroadcasts();
+      return res.json({ broadcasts });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/broadcasts', requireAdminAuth, async (req, res) => {
+    try {
+      const { title, message, targetAudience } = req.body;
+      if (!title || !message) {
+        return res.status(400).json({ error: 'Title and message are required' });
+      }
+      const broadcast = await db.createBroadcast({ title, message, targetAudience: targetAudience || 'all' });
+      return res.json({ broadcast, success: true });
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }

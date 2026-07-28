@@ -40,13 +40,11 @@ import { TasksPage } from "./pages/TasksPage";
 import { WalletPage } from "./pages/WalletPage";
 import { ReferralsPage } from "./pages/ReferralsPage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { AdminPage } from "./pages/AdminPage";
-
 
 export default function App() {
 
   const [activeTab, setActiveTab] =
-    useState<TabType | "admin">("home");
+    useState<TabType>("home");
 
   const [currentUser, setCurrentUser] =
     useState<User | null>(null);
@@ -620,10 +618,6 @@ export default function App() {
           handleSelectSimulatedUser
         }
 
-        onOpenAdmin={()=>
-          setActiveTab("admin")
-        }
-
         onOpenBotSandbox={()=>
           setActiveModal("botsandbox")
         }
@@ -802,10 +796,6 @@ export default function App() {
 
                 user={currentUser}
 
-                onOpenAdmin={()=>
-                  setActiveTab("admin")
-                }
-
                 onOpenBotSandbox={()=>
                   setActiveModal("botsandbox")
                 }
@@ -813,27 +803,6 @@ export default function App() {
                 onNavigateTab={
                   (tab)=>
                   setActiveTab(tab)
-                }
-
-              />
-
-            )
-
-          }
-
-
-
-          {
-            activeTab==="admin" && (
-
-              <AdminPage
-
-                onBackToApp={()=>
-                  setActiveTab("home")
-                }
-
-                onShowToast={
-                  addToast
                 }
 
               />
@@ -1000,32 +969,25 @@ export default function App() {
 
 
 
-      {
-        activeTab !== "admin" && (
+      <Navbar
 
-          <Navbar
+        activeTab={
+          activeTab as TabType
+        }
 
-            activeTab={
-              activeTab as TabType
-            }
+        onChangeTab={
+          (tab)=>
+          setActiveTab(tab)
+        }
 
-            onChangeTab={
-              (tab)=>
-              setActiveTab(tab)
-            }
+        pendingTasksCount={
+          tasks.filter(
+            task=>
+            !completedTaskIds.includes(task.id)
+          ).length
+        }
 
-            pendingTasksCount={
-              tasks.filter(
-                task=>
-                !completedTaskIds.includes(task.id)
-              ).length
-            }
-
-          />
-
-        )
-
-      }
+      />
 
 
 

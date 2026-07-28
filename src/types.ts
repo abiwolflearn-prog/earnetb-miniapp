@@ -139,6 +139,24 @@ export interface AdminAnalytics {
   flaggedUsersCount: number;
 }
 
+export interface SystemSettings {
+  minWithdrawalBirr: number;
+  maintenanceMode: boolean;
+  botUsername: string;
+  botTokenConfigured: boolean;
+  systemNotice: string;
+  autoApprovalThreshold: number;
+}
+
+export interface BroadcastNotification {
+  id: string;
+  title: string;
+  message: string;
+  targetAudience: 'all' | 'active' | 'blocked';
+  sentAt: string;
+  recipientCount: number;
+}
+
 export interface BotCommandResponse {
   command: string;
   text: string;

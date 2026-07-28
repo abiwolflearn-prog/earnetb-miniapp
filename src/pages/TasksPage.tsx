@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Task, TaskCategory } from '../types';
-import { Search, CheckCircle2, Clock, Zap, MessageSquare, Video, FileText, HelpCircle, Calendar, Sparkles, Filter, ChevronRight } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
+import { Search, CheckCircle2, Zap, MessageSquare, Video, FileText, HelpCircle, Calendar, Sparkles, Filter, ChevronRight } from 'lucide-react';
 
 interface TasksPageProps {
   tasks: Task[];
@@ -17,18 +18,19 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   onOpenQuizModal,
   onOpenCheckIn
 }) => {
+  const { t, formatCurrency } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'available' | 'completed'>('available');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const categories: Array<{ id: TaskCategory | 'all'; label: string; icon: any }> = [
-    { id: 'all', label: 'All Tasks', icon: Zap },
-    { id: 'social', label: 'Social Tasks', icon: MessageSquare },
-    { id: 'engagement', label: 'Engagement', icon: Sparkles },
-    { id: 'video', label: 'Video Tasks', icon: Video },
-    { id: 'article', label: 'Read Articles', icon: FileText },
-    { id: 'quiz', label: 'Quizzes', icon: HelpCircle },
-    { id: 'daily', label: 'Daily Attendance', icon: Calendar }
+    { id: 'all', label: t('tasks.categories_all'), icon: Zap },
+    { id: 'social', label: t('tasks.categories_social'), icon: MessageSquare },
+    { id: 'engagement', label: t('tasks.categories_engagement'), icon: Sparkles },
+    { id: 'video', label: t('tasks.categories_video'), icon: Video },
+    { id: 'article', label: t('tasks.categories_article'), icon: FileText },
+    { id: 'quiz', label: t('tasks.categories_quiz'), icon: HelpCircle },
+    { id: 'daily', label: t('tasks.categories_daily'), icon: Calendar }
   ];
 
   const filteredTasks = tasks.filter((task) => {
@@ -63,8 +65,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     <div className="space-y-5 pb-24">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Earn Tasks Center</h2>
-        <p className="text-xs text-slate-400">Complete tasks to accumulate Birr rewards & points</p>
+        <h2 className="text-2xl font-black text-white">{t('tasks.center_title')}</h2>
+        <p className="text-xs text-slate-400">{t('tasks.center_subtitle')}</p>
       </div>
 
       {/* Search Bar & Status Filter */}
@@ -75,7 +77,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tasks by title or category..."
+            placeholder={t('tasks.search_placeholder')}
             className="w-full bg-[#0f0f15] border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500/80 transition-all placeholder:text-slate-500"
           />
         </div>
@@ -90,7 +92,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                 : 'bg-[#0f0f15] border border-white/10 text-slate-400 hover:text-slate-200'
             }`}
           >
-            Available Tasks ({tasks.filter(t => !completedTaskIds.includes(t.id)).length})
+            {t('tasks.available_tasks', { count: tasks.filter(t => !completedTaskIds.includes(t.id)).length })}
           </button>
           <button
             onClick={() => setSelectedStatus('completed')}
@@ -100,7 +102,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                 : 'bg-[#0f0f15] border border-white/10 text-slate-400 hover:text-slate-200'
             }`}
           >
-            Completed ({completedTaskIds.length})
+            {t('tasks.completed_tasks', { count: completedTaskIds.length })}
           </button>
           <button
             onClick={() => setSelectedStatus('all')}
@@ -110,7 +112,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                 : 'bg-[#0f0f15] border border-white/10 text-slate-400 hover:text-slate-200'
             }`}
           >
-            All ({tasks.length})
+            {t('tasks.all_tasks', { count: tasks.length })}
           </button>
         </div>
       </div>
@@ -161,7 +163,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     </span>
                     {task.verificationType === 'quiz' && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                        Quiz
+                        {t('tasks.quiz_badge')}
                       </span>
                     )}
                   </div>
@@ -172,17 +174,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({
 
                 <div className="text-right flex-shrink-0 space-y-2">
                   <div>
-                    <span className="text-base font-extrabold text-indigo-400 block">+{task.rewardBirr} Birr</span>
-                    <span className="text-[10px] text-slate-500">+{task.rewardPoints} PTS</span>
+                    <span className="text-base font-extrabold text-indigo-400 block">+{formatCurrency(task.rewardBirr)}</span>
+                    <span className="text-[10px] text-slate-500">+{task.rewardPoints} {t('home.pts')}</span>
                   </div>
 
                   {isCompleted ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {t('tasks.done')}
                     </span>
                   ) : (
                     <button className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1">
-                      <span>Start</span>
+                      <span>{t('home.start')}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -195,11 +197,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({
         {filteredTasks.length === 0 && (
           <div className="p-10 rounded-3xl bg-[#0f0f15] border border-white/5 text-center space-y-2">
             <Filter className="w-10 h-10 text-slate-500 mx-auto" />
-            <h4 className="text-sm font-semibold text-white">No Tasks Match Filters</h4>
-            <p className="text-xs text-slate-400">Try changing your search query or selecting a different category.</p>
+            <h4 className="text-sm font-semibold text-white">{t('tasks.no_tasks_match')}</h4>
+            <p className="text-xs text-slate-400">{t('tasks.no_tasks_match_desc')}</p>
           </div>
         )}
       </div>
     </div>
   );
 };
+

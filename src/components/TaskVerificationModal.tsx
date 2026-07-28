@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Task } from '../types';
 import { openExternalLink, triggerHaptic, getInitData } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, ExternalLink, Timer, AlertCircle, Sparkles, X, ShieldCheck, Clock, Send, Camera } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Timer, AlertCircle, Sparkles, X, ShieldCheck, Clock, Send } from 'lucide-react';
 
 interface TaskVerificationModalProps {
   task: Task | null;
@@ -18,6 +19,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
   onComplete,
   onRefreshSubmissions
 }) => {
+  const { t, formatCurrency } = useTranslation();
   const [step, setStep] = useState<'initial' | 'visiting' | 'verifying' | 'completed' | 'submitted_pending'>('initial');
   const [countdown, setCountdown] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
       });
     } catch (err: any) {
       triggerHaptic('error');
-      setErrorMsg(err.message || 'Verification failed. Please ensure you joined or completed the step.');
+      setErrorMsg(err.message || t('tasks.verification_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +85,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
 
   const handleSubmitProof = async () => {
     if (!proofInput.trim()) {
-      setErrorMsg('Please enter your username, profile link, or screenshot details as proof.');
+      setErrorMsg(t('tasks.enter_proof_error'));
       return;
     }
 
@@ -109,7 +111,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit proof.');
+        throw new Error(data.error || t('tasks.submit_proof_failed'));
       }
 
       setStep('submitted_pending');
@@ -117,7 +119,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
       if (onRefreshSubmissions) onRefreshSubmissions();
     } catch (err: any) {
       triggerHaptic('error');
-      setErrorMsg(err.message || 'Failed to submit proof. Please try again.');
+      setErrorMsg(err.message || t('tasks.submit_proof_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -142,8 +144,8 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                 <ShieldCheck className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-white">Task Verification</h3>
-                <p className="text-xs text-slate-400">Complete task to claim rewards</p>
+                <h3 className="text-base font-bold text-white">{t('tasks.task_verification_title')}</h3>
+                <p className="text-xs text-slate-400">{t('tasks.task_verification_subtitle')}</p>
               </div>
             </div>
             <button
@@ -161,7 +163,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                 {task.platform || task.category}
               </span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold text-amber-400">+{task.rewardBirr} Birr</span>
+                <span className="text-sm font-extrabold text-amber-400">+{formatCurrency(task.rewardBirr)}</span>
                 <span className="text-xs text-slate-400">({task.rewardPoints} PTS)</span>
               </div>
             </div>
@@ -182,15 +184,15 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-bold text-white">Reward Claimed!</h4>
+              <h4 className="text-xl font-bold text-white">{t('tasks.reward_claimed_title')}</h4>
               <p className="text-sm text-slate-300">
-                You earned <strong className="text-amber-400">+{task.rewardBirr} Birr</strong> and <strong className="text-indigo-400">+{task.rewardPoints} Points</strong>!
+                {t('tasks.reward_claimed_desc', { birr: formatCurrency(task.rewardBirr), points: task.rewardPoints })}
               </p>
               <button
                 onClick={onClose}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white shadow-lg shadow-indigo-500/25 hover:brightness-110 transition-all"
               >
-                Continue Earning
+                {t('tasks.continue_earning')}
               </button>
             </div>
           ) : step === 'submitted_pending' ? (
@@ -198,15 +200,15 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
               <div className="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto">
                 <Clock className="w-10 h-10 animate-pulse" />
               </div>
-              <h4 className="text-xl font-bold text-white">Proof Under Admin Review!</h4>
+              <h4 className="text-xl font-bold text-white">{t('tasks.proof_pending_title')}</h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Your task submission has been recorded. Our verification team will review your proof (<strong className="text-amber-300">{proofInput}</strong>) and credit <strong className="text-amber-400">+{task.rewardBirr} Birr</strong> upon approval.
+                {t('tasks.proof_pending_desc', { proof: proofInput, amount: formatCurrency(task.rewardBirr) })}
               </p>
               <button
                 onClick={onClose}
                 className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white shadow-lg shadow-indigo-500/25 transition-all"
               >
-                Close & Return
+                {t('common.close')}
               </button>
             </div>
           ) : (
@@ -214,14 +216,14 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
               {/* Step 1: Open Target Link */}
               <div className="p-4 rounded-2xl bg-[#050508] border border-white/10 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-semibold text-slate-200">Step 1: Open Social Channel / Link</span>
-                  <span>Visit Link</span>
+                  <span className="font-semibold text-slate-200">{t('tasks.step1_open_link')}</span>
+                  <span>{t('tasks.visit_link')}</span>
                 </div>
                 <button
                   onClick={handleOpenTaskUrl}
                   className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/20"
                 >
-                  <span>Open {task.platform ? task.platform.toUpperCase() : 'Link'} Task</span>
+                  <span>{t('tasks.open_task_btn', { platform: (task.platform || 'Link').toUpperCase() })}</span>
                   <ExternalLink className="w-4 h-4" />
                 </button>
               </div>
@@ -230,11 +232,11 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
               {isAdminCheckTask ? (
                 <div className="p-4 rounded-2xl bg-[#050508] border border-white/10 space-y-3">
                   <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
-                    <span>Step 2: Submit Verification Proof</span>
-                    <span className="text-amber-400 font-normal">Admin Approval</span>
+                    <span>{t('tasks.step2_submit_proof')}</span>
+                    <span className="text-amber-400 font-normal">{t('tasks.admin_approval')}</span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    Provide your {task.platform || 'social'} handle, profile link, or screenshot details so our team can verify your action.
+                    {t('tasks.proof_instructions', { platform: task.platform || 'social' })}
                   </p>
                   <input
                     type="text"
@@ -242,12 +244,12 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                     onChange={(e) => setProofInput(e.target.value)}
                     placeholder={
                       task.platform === 'youtube'
-                        ? 'e.g. @mychannel or YouTube Channel Link'
+                        ? '@mychannel'
                         : task.platform === 'instagram'
-                        ? 'e.g. @my_instagram_username'
+                        ? '@my_instagram_username'
                         : task.platform === 'facebook'
-                        ? 'e.g. facebook.com/myprofile'
-                        : 'Enter username, handle, or link proof...'
+                        ? 'facebook.com/myprofile'
+                        : '@username'
                     }
                     className="w-full bg-[#0f0f15] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"
                   />
@@ -257,11 +259,11 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-md shadow-amber-500/20"
                   >
                     {isSubmitting ? (
-                      <span>Submitting proof...</span>
+                      <span>{t('tasks.submitting_proof')}</span>
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Submit Proof for Admin Verification</span>
+                        <span>{t('tasks.submit_proof_btn')}</span>
                       </>
                     )}
                   </button>
@@ -272,7 +274,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                   {step === 'visiting' && countdown > 0 && (
                     <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-medium">
                       <Timer className="w-5 h-5 animate-spin" />
-                      <span>Please wait {countdown} seconds for verification check...</span>
+                      <span>{t('tasks.wait_countdown', { seconds: countdown })}</span>
                     </div>
                   )}
 
@@ -283,11 +285,11 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
                       className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
                     >
                       {isSubmitting ? (
-                        <span>Verifying Telegram membership...</span>
+                        <span>{t('tasks.verifying_tg_membership')}</span>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          <span>Verify & Claim +{task.rewardBirr} Birr</span>
+                          <span>{t('tasks.verify_and_claim', { reward: formatCurrency(task.rewardBirr) })}</span>
                         </>
                       )}
                     </button>
@@ -301,3 +303,4 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
     </AnimatePresence>
   );
 };
+

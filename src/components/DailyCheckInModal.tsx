@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from '../types';
 import { triggerHaptic } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 import confetti from 'canvas-confetti';
-import { Flame, CheckCircle2, AlertCircle, X, Sparkles, Calendar } from 'lucide-react';
+import { Flame, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 interface DailyCheckInModalProps {
   user: User | null;
@@ -18,6 +19,7 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
   onClose,
   onCheckIn
 }) => {
+  const { t, formatCurrency } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -42,7 +44,7 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
       });
     } catch (err: any) {
       triggerHaptic('error');
-      setErrorMsg(err.message || 'Already checked in today!');
+      setErrorMsg(err.message || t('tasks.already_checked_in'));
     } finally {
       setIsSubmitting(false);
     }
@@ -64,8 +66,8 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
                 <Flame className="w-5 h-5 fill-amber-400/20" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-white">Daily Streak Bonus</h3>
-                <p className="text-xs text-slate-400">Check in every 24 hours to scale your earnings</p>
+                <h3 className="text-base font-bold text-white">{t('tasks.daily_streak_title')}</h3>
+                <p className="text-xs text-slate-400">{t('tasks.daily_streak_subtitle')}</p>
               </div>
             </div>
             <button
@@ -79,15 +81,15 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
           {/* Current Streak Indicator */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border border-amber-500/30 flex items-center justify-between">
             <div>
-              <p className="text-xs text-amber-300 font-medium">Your Current Streak</p>
+              <p className="text-xs text-amber-300 font-medium">{t('tasks.current_streak')}</p>
               <h4 className="text-2xl font-black text-white flex items-center gap-1.5 mt-0.5">
-                <span>{user.dailyStreak} Days</span>
+                <span>{t('tasks.streak_days_count', { days: user.dailyStreak })}</span>
                 <Flame className="w-6 h-6 text-amber-400 fill-amber-400 animate-pulse" />
               </h4>
             </div>
             <div className="text-right">
-              <p className="text-[11px] text-slate-400">Next Streak Multiplier</p>
-              <p className="text-sm font-bold text-amber-400">+{Math.min(user.dailyStreak + 1, 7) * 20} Birr</p>
+              <p className="text-[11px] text-slate-400">{t('tasks.next_multiplier')}</p>
+              <p className="text-sm font-bold text-amber-400">+{formatCurrency(Math.min(user.dailyStreak + 1, 7) * 20)}</p>
             </div>
           </div>
 
@@ -116,7 +118,7 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
                       : 'bg-slate-950 border-slate-800 text-slate-400'
                   }`}
                 >
-                  <span className="text-[10px] font-semibold opacity-75">Day {dayNum}</span>
+                  <span className="text-[10px] font-semibold opacity-75">{t('tasks.day_n', { day: dayNum })}</span>
                   <div className="my-1.5">
                     {isPast ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto" />
@@ -124,7 +126,7 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
                       <span className="text-xs font-black text-amber-400">+{rewardBirr}</span>
                     )}
                   </div>
-                  <span className="text-[9px] text-slate-400">Birr</span>
+                  <span className="text-[9px] text-slate-400">{t('common.birr')}</span>
                 </div>
               );
             })}
@@ -135,9 +137,9 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-1">
               <div className="flex items-center justify-center gap-2 text-emerald-400 font-semibold text-sm">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Checked In Today!</span>
+                <span>{t('tasks.checked_in_today')}</span>
               </div>
-              <p className="text-xs text-slate-400">Come back tomorrow to extend your streak and earn more.</p>
+              <p className="text-xs text-slate-400">{t('tasks.come_back_tomorrow')}</p>
             </div>
           ) : (
             <button
@@ -146,11 +148,11 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Claiming Daily Reward...</span>
+                <span>{t('tasks.claiming_reward')}</span>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Claim Daily Bonus (+{Math.min(user.dailyStreak + 1, 7) * 20} Birr)</span>
+                  <span>{t('tasks.claim_daily_bonus', { amount: formatCurrency(Math.min(user.dailyStreak + 1, 7) * 20) })}</span>
                 </>
               )}
             </button>
@@ -160,3 +162,4 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({
     </AnimatePresence>
   );
 };
+

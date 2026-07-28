@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, WithdrawalMethod } from '../types';
 import { triggerHaptic } from '../lib/telegram';
+import { useTranslation } from '../i18n/useTranslation';
 import confetti from 'canvas-confetti';
-import { Wallet, AlertCircle, CheckCircle2, X, ArrowRight, ShieldCheck, Phone, CreditCard, Building2 } from 'lucide-react';
+import { Wallet, AlertCircle, CheckCircle2, X, ShieldCheck, Phone, CreditCard, Building2 } from 'lucide-react';
 
 interface WithdrawModalProps {
   user: User | null;
@@ -23,6 +24,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   onClose,
   onSubmitWithdrawal
 }) => {
+  const { t, formatCurrency } = useTranslation();
   const [method, setMethod] = useState<WithdrawalMethod>('telebirr');
   const [amount, setAmount] = useState<string>('2000');
   const [accountNumber, setAccountNumber] = useState<string>('');
@@ -38,25 +40,25 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     const numericAmount = Number(amount);
 
     if (isNaN(numericAmount) || numericAmount < 2000) {
-      setErrorMsg('Minimum withdrawal amount is 2,000 Birr.');
+      setErrorMsg(t('wallet.min_withdrawal_error'));
       triggerHaptic('error');
       return;
     }
 
     if (numericAmount > user.balance) {
-      setErrorMsg(`Insufficient balance. Your available balance is ${user.balance.toLocaleString()} Birr.`);
+      setErrorMsg(t('wallet.insufficient_balance_error', { balance: formatCurrency(user.balance) }));
       triggerHaptic('error');
       return;
     }
 
     if (!accountNumber.trim()) {
-      setErrorMsg('Please enter your account / phone number.');
+      setErrorMsg(t('wallet.account_number_error'));
       triggerHaptic('error');
       return;
     }
 
     if (!accountName.trim()) {
-      setErrorMsg('Please enter the account holder full name.');
+      setErrorMsg(t('wallet.account_name_error'));
       triggerHaptic('error');
       return;
     }
@@ -80,7 +82,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       });
     } catch (err: any) {
       triggerHaptic('error');
-      setErrorMsg(err.message || 'Withdrawal submission failed.');
+      setErrorMsg(err.message || t('wallet.withdrawal_failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -92,21 +94,21 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       name: 'Telebirr',
       icon: Phone,
       color: 'from-cyan-500 to-blue-600',
-      desc: 'Instant Ethio Telecom mobile wallet transfer'
+      desc: t('wallet.telebirr_desc')
     },
     {
       id: 'cbe_birr',
       name: 'CBE Birr',
       icon: CreditCard,
       color: 'from-purple-600 to-indigo-600',
-      desc: 'Commercial Bank of Ethiopia mobile money'
+      desc: t('wallet.cbe_birr_desc')
     },
     {
       id: 'bank_transfer',
       name: 'Bank Transfer',
       icon: Building2,
       color: 'from-emerald-500 to-teal-600',
-      desc: 'Direct deposit to any Ethiopian bank account'
+      desc: t('wallet.bank_desc')
     }
   ];
 
@@ -128,8 +130,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 <Wallet className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="text-base font-bold text-white">Withdraw Rewards</h3>
-                <p className="text-xs text-slate-400">Cash out to Telebirr, CBE Birr or Bank</p>
+                <h3 className="text-base font-bold text-white">{t('wallet.withdraw_rewards')}</h3>
+                <p className="text-xs text-slate-400">{t('wallet.cashout_subtitle')}</p>
               </div>
             </div>
             <button
@@ -145,23 +147,27 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-bold text-white">Withdrawal Request Submitted!</h4>
+              <h4 className="text-xl font-bold text-white">{t('wallet.withdrawal_success_title')}</h4>
               <p className="text-sm text-slate-300 leading-relaxed max-w-sm mx-auto">
-                Your request for <strong className="text-amber-400">{Number(amount).toLocaleString()} Birr</strong> via <strong className="text-indigo-400">{method.toUpperCase()}</strong> is being processed and will be sent to account <code className="bg-white/10 border border-white/10 px-1.5 py-0.5 rounded text-white">{accountNumber}</code> shortly.
+                {t('wallet.withdrawal_success_desc', {
+                  amount: formatCurrency(Number(amount)),
+                  method: method.toUpperCase(),
+                  account: accountNumber
+                })}
               </p>
               <button
                 onClick={onClose}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white shadow-lg shadow-indigo-500/25 hover:brightness-110 transition-all"
               >
-                Done
+                {t('common.done')}
               </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
               {/* Balance Summary */}
               <div className="p-3.5 rounded-2xl bg-[#050508] border border-white/10 flex items-center justify-between text-xs">
-                <span className="text-slate-400">Available Balance:</span>
-                <span className="font-extrabold text-amber-400 text-sm">{user.balance.toLocaleString()} Birr</span>
+                <span className="text-slate-400">{t('wallet.available_balance')}:</span>
+                <span className="font-extrabold text-amber-400 text-sm">{formatCurrency(user.balance)}</span>
               </div>
 
               {errorMsg && (
@@ -173,7 +179,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
               {/* Payment Method Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Select Cashout Method</label>
+                <label className="text-xs font-semibold text-slate-300">{t('wallet.select_method')}</label>
                 <div className="grid grid-cols-1 gap-2">
                   {methodOptions.map((opt) => {
                     const Icon = opt.icon;
@@ -211,8 +217,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               {/* Amount Input */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-semibold text-slate-300">Withdrawal Amount (Birr)</label>
-                  <span className="text-slate-400">Min: 2,000 Birr</span>
+                  <label className="font-semibold text-slate-300">{t('wallet.withdrawal_amount')}</label>
+                  <span className="text-slate-400">{t('wallet.min_amount_label')}</span>
                 </div>
                 <div className="relative">
                   <input
@@ -229,7 +235,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                     onClick={() => setAmount(user.balance.toString())}
                     className="absolute right-2 top-2 px-2.5 py-1 text-xs font-semibold rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30"
                   >
-                    MAX
+                    {t('wallet.max')}
                   </button>
                 </div>
               </div>
@@ -237,7 +243,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               {/* Account Number / Phone */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-300">
-                  {method === 'telebirr' ? 'Telebirr Phone Number' : method === 'cbe_birr' ? 'CBE Birr Phone / Account' : 'Bank Account Number'}
+                  {method === 'telebirr' ? t('wallet.telebirr_phone_label') : method === 'cbe_birr' ? t('wallet.cbe_phone_label') : t('wallet.bank_account_label')}
                 </label>
                 <input
                   type="text"
@@ -250,7 +256,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
 
               {/* Full Name */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">Account Holder Full Name</label>
+                <label className="text-xs font-semibold text-slate-300">{t('wallet.account_holder_label')}</label>
                 <input
                   type="text"
                   value={accountName}
@@ -266,11 +272,11 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:brightness-110 font-extrabold text-white text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 disabled:opacity-50 transition-all mt-2"
               >
                 {isSubmitting ? (
-                  <span>Processing Withdrawal...</span>
+                  <span>{t('wallet.processing_withdrawal')}</span>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Submit Request ({Number(amount || 0).toLocaleString()} Birr)</span>
+                    <span>{t('wallet.submit_request', { amount: formatCurrency(Number(amount || 0)) })}</span>
                   </>
                 )}
               </button>
@@ -281,3 +287,4 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
     </AnimatePresence>
   );
 };
+

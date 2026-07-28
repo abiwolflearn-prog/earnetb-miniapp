@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { triggerHaptic, openExternalLink } from '../lib/telegram';
-import { Users, Copy, Share2, Check, Trophy, Sparkles, Gift, ArrowRight } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
+import { Users, Copy, Share2, Check, Trophy, Gift } from 'lucide-react';
+import { LeaderboardPodium, LeaderboardUser } from '../components/LeaderboardPodium';
 
 interface ReferralsPageProps {
   user: User;
@@ -33,7 +35,29 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
   referralsData,
   onShowToast
 }) => {
+  const { t, formatCurrency } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [podiumData, setPodiumData] = useState<{
+    top3: { rank1: LeaderboardUser | null; rank2: LeaderboardUser | null; rank3: LeaderboardUser | null };
+    leaderboard: LeaderboardUser[];
+  }>({
+    top3: { rank1: null, rank2: null, rank3: null },
+    leaderboard: []
+  });
+
+  useEffect(() => {
+    fetch('/api/leaderboard')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.top3) {
+          setPodiumData({
+            top3: data.top3,
+            leaderboard: data.leaderboard || []
+          });
+        }
+      })
+      .catch((err) => console.error('Leaderboard error:', err));
+  }, []);
 
   const botUsername = 'EtNovaTasksbot';
   const referralLink = `https://t.me/${botUsername}/app?startapp=${user.referralCode}`;
@@ -42,13 +66,13 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
     triggerHaptic('light');
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
-    onShowToast('Referral Link Copied!', 'Share it with friends to earn 50 Birr per referral.', 'success');
+    onShowToast(t('referrals.copied_toast_title'), t('referrals.copied_toast_desc'), 'success');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShareOnTelegram = () => {
     triggerHaptic('medium');
-    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('Join NovaTask Telegram Mini App and earn Telebirr cash rewards by completing daily tasks!')}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(t('referrals.share_text'))}`;
     openExternalLink(shareUrl);
   };
 
@@ -56,8 +80,8 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
     <div className="space-y-5 pb-24">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Invite & Earn Program</h2>
-        <p className="text-xs text-slate-400">Earn 50 Birr + 500 PTS for every friend who joins via your link</p>
+        <h2 className="text-2xl font-black text-white">{t('referrals.title')}</h2>
+        <p className="text-xs text-slate-400">{t('referrals.subtitle')}</p>
       </div>
 
       {/* Main Invite Card */}
@@ -68,26 +92,26 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
             <Gift className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Invite Friends & Earn</h3>
-            <p className="text-xs text-purple-200">Unlimited referral commission</p>
+            <h3 className="text-lg font-bold text-white">{t('referrals.invite_friends')}</h3>
+            <p className="text-xs text-purple-200">{t('referrals.unlimited_commission')}</p>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 relative z-10">
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-            <span className="text-[11px] text-slate-400 block">Invited Friends</span>
+            <span className="text-[11px] text-slate-400 block">{t('referrals.invited_friends')}</span>
             <span className="text-xl font-bold text-white">{referralsData.referralsCount}</span>
           </div>
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-            <span className="text-[11px] text-slate-400 block">Total Referral Earnings</span>
-            <span className="text-xl font-bold text-amber-400">{referralsData.totalEarnedBirr} Birr</span>
+            <span className="text-[11px] text-slate-400 block">{t('referrals.total_referral_earnings')}</span>
+            <span className="text-xl font-bold text-amber-400">{formatCurrency(referralsData.totalEarnedBirr)}</span>
           </div>
         </div>
 
         {/* Referral Link Box */}
         <div className="space-y-1.5 pt-2 relative z-10">
-          <label className="text-xs font-semibold text-slate-300">Your Unique Telegram Referral Link</label>
+          <label className="text-xs font-semibold text-slate-300">{t('referrals.your_link')}</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -100,7 +124,7 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
               className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold flex items-center gap-1.5 transition-colors border border-white/10"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied' : 'Copy'}</span>
+              <span>{copied ? t('referrals.copied') : t('referrals.copy')}</span>
             </button>
           </div>
         </div>
@@ -110,77 +134,38 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:brightness-110 font-extrabold text-white text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition-all relative z-10"
         >
           <Share2 className="w-4 h-4" />
-          <span>Share Referral Link on Telegram</span>
+          <span>{t('referrals.share_on_telegram')}</span>
         </button>
       </div>
 
-      {/* Referral Leaderboard */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span>Top Referrers Leaderboard</span>
-          </h3>
-          <span className="text-xs text-slate-400">Live Rankings</span>
-        </div>
-
-        <div className="space-y-2">
-          {referralsData.leaderboard.map((leader) => (
-            <div
-              key={leader.rank}
-              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                leader.rank === 1
-                  ? 'bg-amber-500/10 border-amber-500/30'
-                  : 'bg-white/5 border-white/10'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`w-7 h-7 rounded-xl text-xs font-black flex items-center justify-center ${
-                    leader.rank === 1
-                      ? 'bg-amber-500 text-slate-950'
-                      : leader.rank === 2
-                      ? 'bg-slate-300 text-slate-950'
-                      : 'bg-white/10 text-slate-300'
-                  }`}
-                >
-                  #{leader.rank}
-                </span>
-                <div>
-                  <p className="text-xs font-bold text-white">{leader.firstName}</p>
-                  <p className="text-[10px] text-slate-400">@{leader.username || `user_${leader.rank}`}</p>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-xs font-extrabold text-amber-400 block">{leader.totalEarnedBirr} Birr</span>
-                <span className="text-[10px] text-slate-400">{leader.referralsCount} friends</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* TOP PODIUM LEADERBOARD */}
+      <div className="p-4 rounded-3xl bg-[#0d0d14] border border-white/10 shadow-2xl">
+        <LeaderboardPodium
+          top3={podiumData.top3}
+          leaderboard={podiumData.leaderboard}
+        />
       </div>
 
       {/* Invited Friends List */}
       <div className="space-y-3">
-        <h3 className="text-base font-bold text-white">Invited Friends ({referralsData.friends.length})</h3>
+        <h3 className="text-base font-bold text-white">{t('referrals.invited_friends_count', { count: referralsData.friends.length })}</h3>
 
         <div className="space-y-2">
           {referralsData.friends.map((friend, idx) => (
             <div key={idx} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white">{friend.firstName}</p>
-                <p className="text-[10px] text-slate-400">Joined {new Date(friend.joinedAt).toLocaleDateString()}</p>
+                <p className="text-[10px] text-slate-400">{t('referrals.joined_date', { date: new Date(friend.joinedAt).toLocaleDateString() })}</p>
               </div>
-              <span className="text-xs font-extrabold text-emerald-400">+50 Birr</span>
+              <span className="text-xs font-extrabold text-emerald-400">+{formatCurrency(50)}</span>
             </div>
           ))}
 
           {referralsData.friends.length === 0 && (
             <div className="p-8 rounded-3xl bg-[#0f0f15] border border-white/5 text-center text-slate-400 text-xs space-y-1">
               <Users className="w-8 h-8 text-indigo-400/50 mx-auto" />
-              <p className="font-semibold text-white">No Friends Invited Yet</p>
-              <p className="text-slate-400">Share your referral link on Telegram groups to earn 50 Birr per friend!</p>
+              <p className="font-semibold text-white">{t('referrals.no_friends')}</p>
+              <p className="text-slate-400">{t('referrals.no_friends_desc')}</p>
             </div>
           )}
         </div>
@@ -188,3 +173,4 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
     </div>
   );
 };
+

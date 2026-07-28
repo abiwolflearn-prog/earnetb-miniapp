@@ -1,26 +1,28 @@
 import React from 'react';
 import { User } from '../types';
-import { User as UserIcon, ShieldCheck, Bot, Shield, ExternalLink, Flame, Trophy, Wallet, CheckCircle2, ChevronRight, MessageSquare } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
+import { LanguageSelector } from '../components/LanguageSelector';
+import { Shield, Bot, ExternalLink, CheckCircle2, ChevronRight, MessageSquare, Globe } from 'lucide-react';
 
 interface ProfilePageProps {
   user: User;
-  onOpenAdmin: () => void;
   onOpenBotSandbox: () => void;
   onNavigateTab: (tab: 'tasks' | 'wallet' | 'referrals') => void;
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   user,
-  onOpenAdmin,
   onOpenBotSandbox,
   onNavigateTab
 }) => {
+  const { t, formatCurrency, formatDate } = useTranslation();
+
   return (
     <div className="space-y-5 pb-24">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-black text-white">Profile & Settings</h2>
-        <p className="text-xs text-slate-400">Manage your Telegram Mini App identity and security</p>
+        <h2 className="text-2xl font-black text-white">{t('profile.title')}</h2>
+        <p className="text-xs text-slate-400">{t('profile.subtitle')}</p>
       </div>
 
       {/* User Overview Header Card */}
@@ -40,19 +42,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </span>
             </div>
             <p className="text-xs text-indigo-400 font-mono">@{user.username || `user_${user.telegramId}`}</p>
-            <p className="text-[11px] text-slate-400">Telegram ID: <code className="text-slate-300">{user.telegramId}</code></p>
+            <p className="text-[11px] text-slate-400">{t('home.tg_id')}: <code className="text-slate-300">{user.telegramId}</code></p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/10 text-xs relative z-10">
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-            <span className="text-slate-400 text-[10px] block uppercase tracking-wider">Joined Date</span>
-            <span className="font-semibold text-white">{new Date(user.createdAt).toLocaleDateString()}</span>
+            <span className="text-slate-400 text-[10px] block uppercase tracking-wider">{t('profile.joined_date')}</span>
+            <span className="font-semibold text-white">{formatDate(user.createdAt)}</span>
           </div>
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5">
-            <span className="text-slate-400 text-[10px] block uppercase tracking-wider">Account Status</span>
-            <span className="font-semibold text-emerald-400">Active & Verified</span>
+            <span className="text-slate-400 text-[10px] block uppercase tracking-wider">{t('profile.account_status')}</span>
+            <span className="font-semibold text-emerald-400">{t('profile.active_verified')}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Language Preference Section */}
+      <div className="p-5 rounded-3xl bg-[#0f0f15] border border-white/10 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-indigo-400" />
+            <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">{t('profile.language_setting')}</h4>
+          </div>
+          <span className="text-[10px] text-slate-400">{t('profile.instant_switch')}</span>
+        </div>
+        <div className="pt-1">
+          <LanguageSelector variant="pill" />
         </div>
       </div>
 
@@ -62,10 +78,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           onClick={() => onNavigateTab('wallet')}
           className="p-5 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 cursor-pointer hover:border-white/20 transition-all"
         >
-          <span className="text-xs text-slate-400 font-medium">Total Cash Balance</span>
-          <p className="text-2xl font-black text-amber-400">{user.balance.toLocaleString()} Birr</p>
+          <span className="text-xs text-slate-400 font-medium">{t('profile.total_cash_balance')}</span>
+          <p className="text-2xl font-black text-amber-400">{formatCurrency(user.balance)}</p>
           <span className="text-[10px] text-indigo-400 flex items-center gap-1 font-semibold">
-            Tap to view wallet <ChevronRight className="w-3 h-3" />
+            {t('profile.view_wallet')} <ChevronRight className="w-3 h-3" />
           </span>
         </div>
 
@@ -73,17 +89,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           onClick={() => onNavigateTab('referrals')}
           className="p-5 rounded-3xl bg-[#0f0f15] border border-white/5 space-y-1 cursor-pointer hover:border-white/20 transition-all"
         >
-          <span className="text-xs text-slate-400 font-medium">Referrals Bonus</span>
-          <p className="text-2xl font-black text-purple-400">{user.referralsCount * 50} Birr</p>
+          <span className="text-xs text-slate-400 font-medium">{t('profile.referrals_bonus')}</span>
+          <p className="text-2xl font-black text-purple-400">{formatCurrency(user.referralsCount * 50)}</p>
           <span className="text-[10px] text-purple-300 flex items-center gap-1 font-semibold">
-            {user.referralsCount} friends invited <ChevronRight className="w-3 h-3" />
+            {t('referrals.friends_count', { count: user.referralsCount })} <ChevronRight className="w-3 h-3" />
           </span>
         </div>
       </div>
 
       {/* Shortcuts & Utilities */}
       <div className="space-y-2">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Utilities</h4>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.quick_utilities')}</h4>
 
         <div className="space-y-2">
           <button
@@ -95,27 +111,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">Telegram Bot Commands Sandbox</p>
-                <p className="text-[11px] text-slate-400">Simulate /start, /help, /tasks bot responses</p>
+                <p className="text-xs font-bold text-white">{t('profile.bot_sandbox_title')}</p>
+                <p className="text-[11px] text-slate-400">{t('profile.bot_sandbox_desc')}</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-500" />
-          </button>
-
-          <button
-            onClick={onOpenAdmin}
-            className="w-full p-4 rounded-2xl bg-purple-950/40 hover:bg-purple-900/40 border border-purple-500/30 flex items-center justify-between text-left transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-purple-200">Admin Panel Access</p>
-                <p className="text-[11px] text-purple-300/70">Manage users, approve withdrawals, create tasks</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-purple-400" />
           </button>
 
           <a
@@ -129,8 +129,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 <MessageSquare className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">Official Telegram Channel</p>
-                <p className="text-[11px] text-slate-400">@NovaTaskOfficial channel updates</p>
+                <p className="text-xs font-bold text-white">{t('profile.telegram_channel_title')}</p>
+                <p className="text-[11px] text-slate-400">{t('profile.telegram_channel_desc')}</p>
               </div>
             </div>
             <ExternalLink className="w-4 h-4 text-slate-500" />
@@ -140,3 +140,4 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     </div>
   );
 };
+
