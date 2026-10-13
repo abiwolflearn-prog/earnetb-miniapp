@@ -393,13 +393,16 @@ async function startServer() {
   app.post('/api/bot/command', async (req, res) => {
     try {
       const { command, user } = req.body;
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const originUrl = host ? `${proto}://${host}` : undefined;
       const tgUser: TelegramUser = user || {
         id: 987654321,
-        first_name: 'Abebe',
-        username: 'abebe_novatask'
+        first_name: 'Member',
+        username: 'earnbirr_member'
       };
 
-      const response = await handleBotCommand(command || '/start', tgUser);
+      const response = await handleBotCommand(command || '/start', tgUser, originUrl);
       return res.json(response);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -409,11 +412,14 @@ async function startServer() {
   app.post('/api/bot/webhook', async (req, res) => {
     try {
       const body = req.body;
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const originUrl = host ? `${proto}://${host}` : undefined;
       if (body?.message) {
         const text = body.message.text || '';
         const tgUser = body.message.from;
         if (text.startsWith('/') && tgUser) {
-          await handleBotCommand(text, tgUser);
+          await handleBotCommand(text, tgUser, originUrl);
         }
       }
       return res.json({ ok: true });
@@ -617,6 +623,13 @@ async function startServer() {
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('[API Error Middleware]', err);
     if (res.headersSent) return next(err);
+    if (err?.name === 'MongooseError' || err?.name === 'MongoNetworkError' || (err?.message && err.message.includes('buffering timed out'))) {
+      console.warn('[AI Studio] Database offline — returning mock empty response');
+      if (req.method === 'GET') {
+        return res.json(req.path.endsWith('s') || req.path.endsWith('s/') ? [] : {});
+      }
+      return res.status(503).json({ error: 'Service temporarily unavailable (database offline)' });
+    }
     return res.status(500).json({ error: err?.message || 'Internal server error' });
   });
 

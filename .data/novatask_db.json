@@ -20,12 +20,33 @@
         "102.213.71.195, 104.23.211.206, 10.26.252.130",
         "102.213.71.195, 172.68.128.173, 10.26.151.3",
         "102.213.71.195, 172.68.128.172, 10.26.238.132",
-        "102.213.71.195, 172.71.190.254, 10.26.238.132"
+        "102.213.71.195, 172.71.190.254, 10.26.238.132",
+        "197.156.124.100, 169.254.169.126"
       ],
-      "lastIp": "102.213.71.195, 172.71.190.254, 10.26.238.132",
+      "lastIp": "197.156.124.100, 169.254.169.126",
       "riskScore": 0,
       "fraudFlags": [],
       "createdAt": "2026-07-27T08:57:52.430Z"
+    },
+    {
+      "id": "usr_12345678",
+      "telegramId": 12345678,
+      "username": "abel_tg",
+      "firstName": "Abel",
+      "balance": 100,
+      "points": 1000,
+      "referralsCount": 0,
+      "referralCode": "ref_12345678",
+      "dailyStreak": 0,
+      "isBlocked": false,
+      "role": "user",
+      "ipAddresses": [
+        "127.0.0.1"
+      ],
+      "lastIp": "127.0.0.1",
+      "riskScore": 0,
+      "fraudFlags": [],
+      "createdAt": "2026-10-13T07:15:52.468Z"
     }
   ],
   "tasks": [
@@ -167,6 +188,16 @@
   "taskSubmissions": [],
   "withdrawals": [],
   "transactions": [
+    {
+      "id": "tx_welcome_1791875752468",
+      "userId": "usr_12345678",
+      "type": "task_reward",
+      "amount": 100,
+      "points": 1000,
+      "description": "Welcome Bonus for joining NovaTask",
+      "status": "completed",
+      "createdAt": "2026-10-13T07:15:52.468Z"
+    },
     {
       "id": "tx_welcome_1785142672430",
       "userId": "usr_987654321",

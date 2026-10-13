@@ -1,25 +1,14 @@
 /**
- * NovaTask - Telegram Mini App Platform
+ * EarnBirr - Telegram Mini App Platform
  * Main App Component
  */
 
 import React, { useEffect, useState } from "react";
-
-import {
-  User,
-  Task,
-  Withdrawal,
-  Transaction,
-  TelegramUser,
-} from "./types";
-
+import { User, Task, Withdrawal, Transaction } from "./types";
 import {
   getTelegramInitData,
-  isTelegramWebAppAvailable,
-  MOCK_TELEGRAM_USERS,
   getTelegramWebApp,
 } from "./lib/telegram";
-
 import { API_URL } from "./lib/api";
 
 import { Header } from "./components/Header";
@@ -33,7 +22,6 @@ import { TaskVerificationModal } from "./components/TaskVerificationModal";
 import { QuizModal } from "./components/QuizModal";
 import { DailyCheckInModal } from "./components/DailyCheckInModal";
 import { WithdrawModal } from "./components/WithdrawModal";
-import { BotSandboxModal } from "./components/BotSandboxModal";
 
 import { HomePage } from "./pages/HomePage";
 import { TasksPage } from "./pages/TasksPage";
@@ -42,444 +30,190 @@ import { ReferralsPage } from "./pages/ReferralsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [referralsData, setReferralsData] = useState({
+    referralCode: "ref_987654321",
+    referralsCount: 0,
+    totalEarnedBirr: 0,
+    friends: [],
+    leaderboard: [],
+  });
 
-  const [activeTab, setActiveTab] =
-    useState<TabType>("home");
+  const [activeModal, setActiveModal] = useState<
+    "checkin" | "withdraw" | "task_verify" | "quiz" | null
+  >(null);
 
-  const [currentUser, setCurrentUser] =
-    useState<User | null>(null);
-
-
-  const [simulatedTgUser, setSimulatedTgUser] =
-    useState<TelegramUser>(
-      MOCK_TELEGRAM_USERS[0]
-    );
-
-
-  const [tasks, setTasks] =
-    useState<Task[]>([]);
-
-
-  const [completedTaskIds, setCompletedTaskIds] =
-    useState<string[]>([]);
-
-
-  const [withdrawals, setWithdrawals] =
-    useState<Withdrawal[]>([]);
-
-
-  const [transactions, setTransactions] =
-    useState<Transaction[]>([]);
-
-
-  const [referralsData, setReferralsData] =
-    useState({
-      referralCode: "ref_987654321",
-      referralsCount: 0,
-      totalEarnedBirr: 0,
-      friends: [],
-      leaderboard: [],
-    });
-
-
-  const [activeModal, setActiveModal] =
-    useState<
-      | "checkin"
-      | "withdraw"
-      | "botsandbox"
-      | "task_verify"
-      | "quiz"
-      | null
-    >(null);
-
-
-  const [selectedTask, setSelectedTask] =
-    useState<Task | null>(null);
-
-
-  const [toasts, setToasts] =
-    useState<ToastMessage[]>([]);
-
-
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = (
     title: string,
     message?: string,
     type: "success" | "error" | "info" = "info"
   ) => {
+    const id = `toast_${Date.now()}`;
+    setToasts((prev) => [...prev, { id, title, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== id));
+    }, 4000);
+  };
 
-    const id =
-      `toast_${Date.now()}`;
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((item) => item.id !== id));
+  };
 
-    setToasts((prev)=>[
-      ...prev,
-      {
-        id,
-        title,
-        message,
-        type
+  useEffect(() => {
+    const tg = getTelegramWebApp();
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+      } catch (e) {
+        console.warn("Telegram WebApp init error:", e);
       }
-    ]);
-
-
-    setTimeout(()=>{
-      setToasts((prev)=>
-        prev.filter(
-          (item)=>item.id !== id
-        )
-      );
-    },4000);
-
-  };
-
-
-  const removeToast=(id:string)=>{
-    setToasts(prev=>
-      prev.filter(
-        item=>item.id!==id
-      )
-    );
-  };
-
-
-
-  useEffect(()=>{
-
-    const tg=getTelegramWebApp();
-
-
-    if(tg){
-
-      tg.ready();
-      tg.expand();
-
-      console.log(
-        "Telegram connected",
-        tg.initDataUnsafe
-      );
-
     }
-    else{
+  }, []);
 
-      console.log(
-        "Not running inside Telegram"
-      );
-
-    }
-
-  },[]);
-    // Authenticate user and load app data
-  const syncUserData = async (
-    customTgUser?: TelegramUser
-  ) => {
-
+  // Authenticate user and load app data
+  const syncUserData = async () => {
     try {
+      const initDataRaw = getTelegramInitData();
 
-      const initDataRaw =
-        isTelegramWebAppAvailable()
-          ? getTelegramInitData()
-          : `user=${encodeURIComponent(
-              JSON.stringify(
-                customTgUser || simulatedTgUser
-              )
-            )}&hash=simulated_hash_for_dev`;
+      // Check for start_param (referral code) from Telegram or URL query param
+      const tg = getTelegramWebApp();
+      const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const referredByCode = tg?.initDataUnsafe?.start_param || urlParams?.get("startapp") || urlParams?.get("ref") || undefined;
 
+      // Authenticate with backend
+      const authRes = await fetch(`${API_URL}/api/auth/telegram`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          initDataRaw,
+          referredByCode,
+        }),
+      });
 
-      // Authenticate
-      const authRes = await fetch(
-        `${API_URL}/api/auth/telegram`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            initDataRaw,
-          }),
-        }
-      );
-
-
-      const authData =
-        await authRes.json();
-
+      const authData = await authRes.json();
 
       if (!authRes.ok) {
-        throw new Error(
-          authData.error ||
-          "Authentication failed"
-        );
+        throw new Error(authData.error || "Authentication failed");
       }
 
-
-      setCurrentUser(
-        authData.user
-      );
-
-
-      setCompletedTaskIds(
-        authData.completedTaskIds || []
-      );
-
-
+      setCurrentUser(authData.user);
+      setCompletedTaskIds(authData.completedTaskIds || []);
 
       // Get tasks
-      const tasksRes = await fetch(
-        `${API_URL}/api/tasks`,
-        {
-          headers:{
-            "x-telegram-init-data":
-              initDataRaw
-          }
-        }
-      );
+      const tasksRes = await fetch(`${API_URL}/api/tasks`, {
+        headers: {
+          "x-telegram-init-data": initDataRaw,
+        },
+      });
 
-
-      const tasksData =
-        await tasksRes.json();
-
-
-      if(tasksData.tasks){
-        setTasks(
-          tasksData.tasks
-        );
+      const tasksData = await tasksRes.json();
+      if (tasksData.tasks) {
+        setTasks(tasksData.tasks);
       }
 
+      // Get withdrawals & transactions
+      const withdrawalsRes = await fetch(`${API_URL}/api/withdrawals`, {
+        headers: {
+          "x-telegram-init-data": initDataRaw,
+        },
+      });
 
-
-      // Get withdrawals
-      const withdrawalRes =
-        await fetch(
-          `${API_URL}/api/withdrawals`,
-          {
-            headers:{
-              "x-telegram-init-data":
-                initDataRaw
-            }
-          }
-        );
-
-
-      const withdrawalData =
-        await withdrawalRes.json();
-
-
-      if(withdrawalData.withdrawals){
-
-        setWithdrawals(
-          withdrawalData.withdrawals
-        );
-
+      const withdrawalsData = await withdrawalsRes.json();
+      if (withdrawalsData.withdrawals) {
+        setWithdrawals(withdrawalsData.withdrawals);
+      }
+      if (withdrawalsData.transactions) {
+        setTransactions(withdrawalsData.transactions);
       }
 
+      // Get referrals info
+      const referralRes = await fetch(`${API_URL}/api/referrals`, {
+        headers: {
+          "x-telegram-init-data": initDataRaw,
+        },
+      });
 
-      if(withdrawalData.transactions){
-
-        setTransactions(
-          withdrawalData.transactions
-        );
-
+      const referralData = await referralRes.json();
+      if (referralData.referralCode) {
+        setReferralsData(referralData);
       }
-
-
-
-      // Get referrals
-      const referralRes =
-        await fetch(
-          `${API_URL}/api/referrals`,
-          {
-            headers:{
-              "x-telegram-init-data":
-                initDataRaw
-            }
-          }
-        );
-
-
-      const referralData =
-        await referralRes.json();
-
-
-      if(referralData.referralCode){
-
-        setReferralsData(
-          referralData
-        );
-
-      }
-
-
-    } catch(error:any){
-
-      console.error(
-        "User sync error:",
-        error
-      );
-
-
-      addToast(
-        "Authentication Error",
-        error.message,
-        "error"
-      );
-
+    } catch (error: any) {
+      console.error("User sync error:", error);
+      addToast("Authentication Error", error.message, "error");
     }
-
   };
 
-
-
-  useEffect(()=>{
-
+  useEffect(() => {
     syncUserData();
-
-  },[simulatedTgUser]);
-
-
-
-  // Switch demo users
-  const handleSelectSimulatedUser =
-    (tgUser:TelegramUser)=>{
-
-      setSimulatedTgUser(
-        tgUser
-      );
-
-
-      localStorage.setItem(
-        "novatask_simulated_tg_user",
-        JSON.stringify(tgUser)
-      );
-
-
-      addToast(
-        "Switched Telegram User",
-        `Logged in as ${tgUser.first_name}`,
-        "info"
-      );
-
-    };
-
-
+  }, []);
 
   // Complete Task
-  const handleCompleteTask =
-    async(
-      taskId:string,
-      quizAnswers?:number[]
-    )=>{
+  const handleCompleteTask = async (
+    taskId: string,
+    quizAnswers?: number[]
+  ) => {
+    try {
+      const initDataRaw = getTelegramInitData();
 
-    try{
+      const res = await fetch(`${API_URL}/api/tasks/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": initDataRaw,
+        },
+        body: JSON.stringify({
+          taskId,
+          quizAnswers,
+        }),
+      });
 
-      const initDataRaw =
-        isTelegramWebAppAvailable()
-        ? getTelegramInitData()
-        : `user=${encodeURIComponent(
-            JSON.stringify(simulatedTgUser)
-          )}&hash=simulated_hash_for_dev`;
-
-
-
-      const res =
-        await fetch(
-          `${API_URL}/api/tasks/complete`,
-          {
-            method:"POST",
-
-            headers:{
-              "Content-Type":
-                "application/json",
-
-              "x-telegram-init-data":
-                initDataRaw
-            },
-
-
-            body:JSON.stringify({
-              taskId,
-              quizAnswers
-            })
-
-          }
-        );
-
-
-
-      const data =
-        await res.json();
-
-
-
-      if(!res.ok){
-
-        throw new Error(
-          data.error ||
-          "Failed to complete task"
-        );
-
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to complete task");
       }
 
-
-
       addToast(
-        "Task Reward Claimed!",
-        `+${data.completedTask.rewardBirr} Birr & +${data.completedTask.rewardPoints} PTS added!`,
+        "Reward Earned!",
+        `+${data.rewardBirr} Birr & +${data.rewardPoints} Points added to your balance!`,
         "success"
       );
 
-
+      setActiveModal(null);
+      setSelectedTask(null);
       syncUserData();
-
-
-
-    }catch(error:any){
-
-      addToast(
-        "Task Error",
-        error.message,
-        "error"
-      );
-
+    } catch (error: any) {
+      addToast("Verification Failed", error.message, "error");
     }
-
   };
-  
+
   // Daily Check-in
   const handleDailyCheckIn = async () => {
-
     try {
+      const initDataRaw = getTelegramInitData();
 
-      const initDataRaw =
-        isTelegramWebAppAvailable()
-          ? getTelegramInitData()
-          : `user=${encodeURIComponent(
-              JSON.stringify(simulatedTgUser)
-            )}&hash=simulated_hash_for_dev`;
-
-
-      const res = await fetch(
-        `${API_URL}/api/user/checkin`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-            "x-telegram-init-data": initDataRaw,
-          },
-        }
-      );
-
+      const res = await fetch(`${API_URL}/api/user/checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": initDataRaw,
+        },
+      });
 
       const data = await res.json();
-
-
       if (!res.ok) {
-        throw new Error(
-          data.error ||
-          "Daily check-in failed"
-        );
+        throw new Error(data.error || "Daily check-in failed");
       }
-
 
       addToast(
         "Daily Streak Claimed!",
@@ -487,86 +221,35 @@ export default function App() {
         "success"
       );
 
-
       syncUserData();
-
-
-    } catch(error:any){
-
-      addToast(
-        "Check-in Error",
-        error.message,
-        "error"
-      );
-
+    } catch (error: any) {
+      addToast("Check-in Error", error.message, "error");
     }
-
   };
 
-
-
   // Withdrawal
-  const handleSubmitWithdrawal =
-    async (
-      wthInput:{
-        amount:number;
-        method:
-          | "telebirr"
-          | "cbe_birr"
-          | "bank_transfer";
-        accountNumber:string;
-        accountName:string;
+  const handleSubmitWithdrawal = async (wthInput: {
+    amount: number;
+    method: "telebirr" | "cbe_birr" | "bank_transfer";
+    accountNumber: string;
+    accountName: string;
+  }) => {
+    try {
+      const initDataRaw = getTelegramInitData();
+
+      const res = await fetch(`${API_URL}/api/withdrawals`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": initDataRaw,
+        },
+        body: JSON.stringify(wthInput),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Withdrawal failed");
       }
-    )=>{
-
-
-    try{
-
-      const initDataRaw =
-        isTelegramWebAppAvailable()
-        ? getTelegramInitData()
-        : `user=${encodeURIComponent(
-            JSON.stringify(simulatedTgUser)
-          )}&hash=simulated_hash_for_dev`;
-
-
-
-      const res =
-        await fetch(
-          `${API_URL}/api/withdrawals`,
-          {
-            method:"POST",
-
-            headers:{
-              "Content-Type":
-                "application/json",
-
-              "x-telegram-init-data":
-                initDataRaw
-            },
-
-            body:JSON.stringify(wthInput)
-
-          }
-        );
-
-
-
-      const data =
-        await res.json();
-
-
-
-      if(!res.ok){
-
-        throw new Error(
-          data.error ||
-          "Withdrawal failed"
-        );
-
-      }
-
-
 
       addToast(
         "Cashout Request Logged",
@@ -574,425 +257,133 @@ export default function App() {
         "success"
       );
 
-
       syncUserData();
-
-
-
-    }catch(error:any){
-
-      addToast(
-        "Withdrawal Error",
-        error.message,
-        "error"
-      );
-
+    } catch (error: any) {
+      addToast("Withdrawal Error", error.message, "error");
     }
-
   };
 
-
-
   return (
-
-    <div className="
-      min-h-screen
-      bg-[#050508]
-      text-slate-200
-      font-sans
-    ">
-
-
-      <NotificationToast
-        toasts={toasts}
-        onDismiss={removeToast}
-      />
-
-
+    <div className="min-h-screen bg-[#050508] text-slate-200 font-sans antialiased flex flex-col selection:bg-indigo-500/30">
+      <NotificationToast toasts={toasts} onDismiss={removeToast} />
 
       <Header
-
         user={currentUser}
-
-        onSelectSimulatedUser={
-          handleSelectSimulatedUser
-        }
-
-        onOpenBotSandbox={()=>
-          setActiveModal("botsandbox")
-        }
-
+        onNavigateProfile={() => setActiveTab("profile")}
       />
 
-
-
-      <main className="
-        max-w-md
-        mx-auto
-        px-4
-        pt-4
-      ">
-
-
-      {
-        currentUser ? (
-
+      <main className="w-full max-w-md mx-auto px-3.5 pt-2 pb-24 flex-1">
+        {currentUser ? (
           <>
-
-
-          {
-            activeTab==="home" && (
-
+            {activeTab === "home" && (
               <HomePage
-
                 user={currentUser}
-
                 tasks={tasks}
-
-                completedTaskIds={
-                  completedTaskIds
-                }
-
-                onNavigateTab={
-                  (tab)=>
-                  setActiveTab(tab)
-                }
-
-                onOpenCheckIn={()=>
-                  setActiveModal("checkin")
-                }
-
-                onOpenTaskModal={
-                  (task)=>{
-
-                    setSelectedTask(task);
-
-                    setActiveModal(
-                      task.verificationType==="quiz"
-                      ? "quiz"
-                      : "task_verify"
-                    );
-
-                  }
-                }
-
-
-                onOpenWithdrawModal={()=>
-                  setActiveModal("withdraw")
-                }
-
+                completedTaskIds={completedTaskIds}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+                onOpenCheckIn={() => setActiveModal("checkin")}
+                onOpenTaskModal={(task) => {
+                  setSelectedTask(task);
+                  setActiveModal(task.verificationType === "quiz" ? "quiz" : "task_verify");
+                }}
+                onOpenWithdrawModal={() => setActiveModal("withdraw")}
               />
+            )}
 
-            )
-
-          }
-
-
-
-          {
-            activeTab==="tasks" && (
-
+            {activeTab === "tasks" && (
               <TasksPage
-
                 tasks={tasks}
-
-                completedTaskIds={
-                  completedTaskIds
-                }
-
-                onOpenTaskModal={
-                  (task)=>{
-
-                    setSelectedTask(task);
-
-                    setActiveModal(
-                      "task_verify"
-                    );
-
-                  }
-                }
-
-
-                onOpenQuizModal={
-                  (task)=>{
-
-                    setSelectedTask(task);
-
-                    setActiveModal(
-                      "quiz"
-                    );
-
-                  }
-                }
-
-
-                onOpenCheckIn={()=>
-                  setActiveModal("checkin")
-                }
-
+                completedTaskIds={completedTaskIds}
+                onOpenTaskModal={(task) => {
+                  setSelectedTask(task);
+                  setActiveModal("task_verify");
+                }}
+                onOpenQuizModal={(task) => {
+                  setSelectedTask(task);
+                  setActiveModal("quiz");
+                }}
+                onOpenCheckIn={() => setActiveModal("checkin")}
               />
+            )}
 
-            )
-
-          }
-
-
-
-          {
-            activeTab==="wallet" && (
-
+            {activeTab === "wallet" && (
               <WalletPage
-
                 user={currentUser}
-
-                withdrawals={
-                  withdrawals
-                }
-
-                transactions={
-                  transactions
-                }
-
-                onOpenWithdrawModal={()=>
-                  setActiveModal("withdraw")
-                }
-
+                withdrawals={withdrawals}
+                transactions={transactions}
+                onOpenWithdrawModal={() => setActiveModal("withdraw")}
               />
+            )}
 
-            )
-
-          }
-
-
-
-          {
-            activeTab==="referrals" && (
-
+            {activeTab === "referrals" && (
               <ReferralsPage
-
                 user={currentUser}
-
-                referralsData={
-                  referralsData
-                }
-
-                onShowToast={
-                  addToast
-                }
-
+                referralsData={referralsData}
+                onToast={addToast}
               />
+            )}
 
-            )
-
-          }
-
-
-
-
-          {
-            activeTab==="profile" && (
-
+            {activeTab === "profile" && (
               <ProfilePage
-
                 user={currentUser}
-
-                onOpenBotSandbox={()=>
-                  setActiveModal("botsandbox")
-                }
-
-                onNavigateTab={
-                  (tab)=>
-                  setActiveTab(tab)
-                }
-
+                onNavigateTab={(tab) => setActiveTab(tab)}
               />
-
-            )
-
-          }
-
-
+            )}
           </>
-
-
-        ):(
-
-
-          <div className="
-            flex
-            flex-col
-            items-center
-            justify-center
-            min-h-[60vh]
-          ">
-
-            <div className="
-              w-10
-              h-10
-              border-4
-              border-cyan-500
-              border-t-transparent
-              rounded-full
-              animate-spin
-            "/>
-
-
-            <p className="
-              text-xs
-              text-slate-400
-              mt-3
-            ">
-
-              Connecting to Telegram WebApp...
-
-            </p>
-
-
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 space-y-4">
+            <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-0.5 shadow-xl shadow-indigo-500/30">
+              <div className="w-full h-full bg-[#050508] rounded-[14px] flex items-center justify-center">
+                <div className="w-7 h-7 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Starting EarnBirr...</h3>
+              <p className="text-xs text-slate-400 mt-1">Authenticating your Telegram account</p>
+            </div>
           </div>
-
-
-        )
-
-      }
-
-
+        )}
       </main>
-      
-      <TaskVerificationModal
-        task={
-          activeModal==="task_verify"
-          ? selectedTask
-          : null
-        }
 
-        onClose={()=>{
+      <TaskVerificationModal
+        task={activeModal === "task_verify" ? selectedTask : null}
+        onClose={() => {
           setActiveModal(null);
           setSelectedTask(null);
         }}
-
-        onComplete={
-          handleCompleteTask
-        }
-
+        onComplete={handleCompleteTask}
       />
-
-
 
       <QuizModal
-
-        task={
-          activeModal==="quiz"
-          ? selectedTask
-          : null
-        }
-
-        onClose={()=>{
+        task={activeModal === "quiz" ? selectedTask : null}
+        onClose={() => {
           setActiveModal(null);
           setSelectedTask(null);
         }}
-
-        onComplete={
-          handleCompleteTask
-        }
-
+        onComplete={handleCompleteTask}
       />
-
-
 
       <DailyCheckInModal
-
         user={currentUser}
-
-        isOpen={
-          activeModal==="checkin"
-        }
-
-        onClose={()=>
-          setActiveModal(null)
-        }
-
-        onCheckIn={
-          handleDailyCheckIn
-        }
-
+        isOpen={activeModal === "checkin"}
+        onClose={() => setActiveModal(null)}
+        onCheckIn={handleDailyCheckIn}
       />
-
-
 
       <WithdrawModal
-
         user={currentUser}
-
-        isOpen={
-          activeModal==="withdraw"
-        }
-
-        onClose={()=>
-          setActiveModal(null)
-        }
-
-        onSubmitWithdrawal={
-          handleSubmitWithdrawal
-        }
-
+        isOpen={activeModal === "withdraw"}
+        onClose={() => setActiveModal(null)}
+        onSubmitWithdrawal={handleSubmitWithdrawal}
       />
-
-
-
-      <BotSandboxModal
-
-        isOpen={
-          activeModal==="botsandbox"
-        }
-
-        onClose={()=>
-          setActiveModal(null)
-        }
-
-        currentUser={
-          simulatedTgUser
-        }
-
-        onLaunchMiniAppFromBot={()=>{
-
-          setActiveTab("home");
-
-          addToast(
-            "Launched from Telegram Bot",
-            "Welcome to NovaTask!",
-            "success"
-          );
-
-        }}
-
-      />
-
-
 
       <Navbar
-
-        activeTab={
-          activeTab as TabType
-        }
-
-        onChangeTab={
-          (tab)=>
-          setActiveTab(tab)
-        }
-
+        activeTab={activeTab as TabType}
+        onChangeTab={(tab) => setActiveTab(tab)}
         pendingTasksCount={
-          tasks.filter(
-            task=>
-            !completedTaskIds.includes(task.id)
-          ).length
+          tasks.filter((task) => !completedTaskIds.includes(task.id)).length
         }
-
       />
-
-
-
     </div>
-
   );
-
 }

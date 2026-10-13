@@ -6,13 +6,11 @@ import { Shield, Bot, ExternalLink, CheckCircle2, ChevronRight, MessageSquare, G
 
 interface ProfilePageProps {
   user: User;
-  onOpenBotSandbox: () => void;
   onNavigateTab: (tab: 'tasks' | 'wallet' | 'referrals') => void;
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   user,
-  onOpenBotSandbox,
   onNavigateTab
 }) => {
   const { t, formatCurrency, formatDate } = useTranslation();
@@ -102,22 +100,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.quick_utilities')}</h4>
 
         <div className="space-y-2">
-          <button
-            onClick={onOpenBotSandbox}
-            className="w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">{t('profile.bot_sandbox_title')}</p>
-                <p className="text-[11px] text-slate-400">{t('profile.bot_sandbox_desc')}</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-500" />
-          </button>
-
           <a
             href="https://t.me/NovaTaskOfficial"
             target="_blank"

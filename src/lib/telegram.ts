@@ -106,6 +106,35 @@ export const MOCK_TELEGRAM_USERS: TelegramUser[] = [
   }
 ];
 
+export function getRealOrPersistentUser(): TelegramUser {
+  const tg = getTelegramWebApp();
+  if (tg?.initDataUnsafe?.user) {
+    return tg.initDataUnsafe.user;
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('earnbirr_user_session');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    const uniqueId = Math.floor(100000000 + Math.random() * 900000000);
+    const initialUser: TelegramUser = {
+      id: uniqueId,
+      first_name: 'Member',
+      username: `user_${uniqueId.toString().slice(-4)}`,
+      photo_url: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      language_code: 'am',
+      is_premium: true
+    };
+    localStorage.setItem('earnbirr_user_session', JSON.stringify(initialUser));
+    return initialUser;
+  }
+
+  return MOCK_TELEGRAM_USERS[0];
+}
+
 export function getTelegramInitData(): string {
   const tg = getTelegramWebApp();
   if (tg) {
@@ -120,13 +149,8 @@ export function getTelegramInitData(): string {
     }
   }
 
-  // Fallback string for browser simulation
-  const savedSimulatedUser = typeof localStorage !== 'undefined' 
-    ? localStorage.getItem('novatask_simulated_tg_user') 
-    : null;
-  
-  const user = savedSimulatedUser ? JSON.parse(savedSimulatedUser) : MOCK_TELEGRAM_USERS[0];
-  
+  // Persistent user session for browser testing/preview
+  const user = getRealOrPersistentUser();
   return `user=${encodeURIComponent(JSON.stringify(user))}&auth_date=${Math.floor(Date.now() / 1000)}&hash=simulated_hash_for_dev`;
 }
 
