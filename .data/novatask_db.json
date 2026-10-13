@@ -47,6 +47,67 @@
       "riskScore": 0,
       "fraudFlags": [],
       "createdAt": "2026-10-13T07:15:52.468Z"
+    },
+    {
+      "id": "usr_240225285",
+      "telegramId": 240225285,
+      "username": "user_5285",
+      "firstName": "Member",
+      "photoUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "balance": 100,
+      "points": 1000,
+      "referralsCount": 0,
+      "referralCode": "ref_240225285",
+      "dailyStreak": 0,
+      "isBlocked": false,
+      "role": "user",
+      "ipAddresses": [
+        "197.156.124.100, 169.254.169.126"
+      ],
+      "lastIp": "197.156.124.100, 169.254.169.126",
+      "riskScore": 0,
+      "fraudFlags": [],
+      "createdAt": "2026-10-13T07:16:18.520Z"
+    },
+    {
+      "id": "usr_964690349",
+      "telegramId": 964690349,
+      "username": "earnbirr_member",
+      "firstName": "Member",
+      "balance": 100,
+      "points": 1000,
+      "referralsCount": 0,
+      "referralCode": "ref_964690349",
+      "dailyStreak": 0,
+      "isBlocked": false,
+      "role": "user",
+      "ipAddresses": [
+        "127.0.0.1"
+      ],
+      "lastIp": "127.0.0.1",
+      "riskScore": 0,
+      "fraudFlags": [],
+      "createdAt": "2026-10-13T07:31:40.929Z"
+    },
+    {
+      "id": "usr_88776655",
+      "telegramId": 88776655,
+      "username": "solomon_et",
+      "firstName": "Solomon",
+      "balance": 100,
+      "points": 1000,
+      "referralsCount": 0,
+      "referralCode": "ref_88776655",
+      "dailyStreak": 0,
+      "isBlocked": false,
+      "role": "user",
+      "ipAddresses": [
+        "127.0.0.1"
+      ],
+      "lastIp": "127.0.0.1",
+      "riskScore": 0,
+      "fraudFlags": [],
+      "createdAt": "2026-10-13T07:31:46.131Z"
     }
   ],
   "tasks": [
@@ -188,6 +249,36 @@
   "taskSubmissions": [],
   "withdrawals": [],
   "transactions": [
+    {
+      "id": "tx_welcome_1791876706131",
+      "userId": "usr_88776655",
+      "type": "task_reward",
+      "amount": 100,
+      "points": 1000,
+      "description": "Welcome Bonus for joining NovaTask",
+      "status": "completed",
+      "createdAt": "2026-10-13T07:31:46.131Z"
+    },
+    {
+      "id": "tx_welcome_1791876700929",
+      "userId": "usr_964690349",
+      "type": "task_reward",
+      "amount": 100,
+      "points": 1000,
+      "description": "Welcome Bonus for joining NovaTask",
+      "status": "completed",
+      "createdAt": "2026-10-13T07:31:40.929Z"
+    },
+    {
+      "id": "tx_welcome_1791875778520",
+      "userId": "usr_240225285",
+      "type": "task_reward",
+      "amount": 100,
+      "points": 1000,
+      "description": "Welcome Bonus for joining NovaTask",
+      "status": "completed",
+      "createdAt": "2026-10-13T07:16:18.520Z"
+    },
     {
       "id": "tx_welcome_1791875752468",
       "userId": "usr_12345678",

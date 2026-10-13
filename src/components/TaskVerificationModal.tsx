@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Task } from '../types';
 import { openExternalLink, triggerHaptic, getInitData } from '../lib/telegram';
+import { safeFetchJson } from '../lib/api';
 import { useTranslation } from '../i18n/useTranslation';
 import confetti from 'canvas-confetti';
 import { CheckCircle2, ExternalLink, Timer, AlertCircle, Sparkles, X, ShieldCheck, Clock, Send } from 'lucide-react';
@@ -95,7 +96,7 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
       triggerHaptic('medium');
 
       const initData = getInitData();
-      const res = await fetch('/api/tasks/submit-proof', {
+      const res = await safeFetchJson<any>('/api/tasks/submit-proof', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,10 +109,8 @@ export const TaskVerificationModal: React.FC<TaskVerificationModalProps> = ({
         })
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || t('tasks.submit_proof_failed'));
+        throw new Error(res.error || t('tasks.submit_proof_failed'));
       }
 
       setStep('submitted_pending');

@@ -4,6 +4,7 @@ import { triggerHaptic, openExternalLink } from '../lib/telegram';
 import { useTranslation } from '../i18n/useTranslation';
 import { Users, Copy, Share2, Check, Trophy, Gift } from 'lucide-react';
 import { LeaderboardPodium, LeaderboardUser } from '../components/LeaderboardPodium';
+import { safeFetchJson } from '../lib/api';
 
 interface ReferralsPageProps {
   user: User;
@@ -46,17 +47,16 @@ export const ReferralsPage: React.FC<ReferralsPageProps> = ({
   });
 
   useEffect(() => {
-    fetch('/api/leaderboard')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.top3) {
+    safeFetchJson('/api/leaderboard')
+      .then((res) => {
+        if (res.ok && res.data?.success && res.data?.top3) {
           setPodiumData({
-            top3: data.top3,
-            leaderboard: data.leaderboard || []
+            top3: res.data.top3,
+            leaderboard: res.data.leaderboard || []
           });
         }
       })
-      .catch((err) => console.error('Leaderboard error:', err));
+      .catch((err) => console.warn('Leaderboard notice:', err));
   }, []);
 
   const botUsername = 'EtNovaTasksbot';

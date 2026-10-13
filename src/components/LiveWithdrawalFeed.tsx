@@ -14,6 +14,7 @@ import {
   Wallet,
   AlertCircle
 } from 'lucide-react';
+import { safeFetchJson } from '../lib/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from '../i18n/useTranslation';
 
@@ -60,9 +61,9 @@ export const LiveWithdrawalFeed: React.FC = () => {
 
   const fetchFeedData = async () => {
     try {
-      const res = await fetch('/api/withdrawals/recent');
-      if (res.ok) {
-        const data = await res.json();
+      const res = await safeFetchJson<any>('/api/withdrawals/recent');
+      if (res.ok && res.data) {
+        const data = res.data;
         if (data.success) {
           setWithdrawals(data.withdrawals || []);
           setStats(data.stats || null);
@@ -71,7 +72,7 @@ export const LiveWithdrawalFeed: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('Failed to load live withdrawal feed:', err);
+      console.warn('Failed to load live withdrawal feed:', err);
     } finally {
       setIsLoading(false);
     }

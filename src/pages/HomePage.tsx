@@ -4,6 +4,7 @@ import { useTranslation } from '../i18n/useTranslation';
 import { Wallet, CheckCircle2, Flame, Users, Zap, Gift, Trophy, Sparkles, ChevronRight, Activity } from 'lucide-react';
 import { LeaderboardPodium, LeaderboardUser } from '../components/LeaderboardPodium';
 import { LiveWithdrawalFeed } from '../components/LiveWithdrawalFeed';
+import { safeFetchJson } from '../lib/api';
 
 interface HomePageProps {
   user: User;
@@ -36,17 +37,16 @@ export const HomePage: React.FC<HomePageProps> = ({
   });
 
   useEffect(() => {
-    fetch('/api/leaderboard')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.top3) {
+    safeFetchJson('/api/leaderboard')
+      .then((res) => {
+        if (res.ok && res.data?.success && res.data?.top3) {
           setLeaderboardData({
-            top3: data.top3,
-            leaderboard: data.leaderboard || []
+            top3: res.data.top3,
+            leaderboard: res.data.leaderboard || []
           });
         }
       })
-      .catch((err) => console.error('Leaderboard fetch error:', err));
+      .catch((err) => console.warn('Leaderboard fetch notice:', err));
   }, []);
 
   const activeTasks = tasks.filter((t) => t.status === 'active');
